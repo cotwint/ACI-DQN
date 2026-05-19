@@ -1,0 +1,77 @@
+[2026-05-19 10:39:38] [INFO] rl.train ::   ep    1/300  day=504  reward=   -585.9  cost=    585.9  eps=0.995
+[2026-05-19 10:39:48] [INFO] rl.train ::   ep   30/300  day=189  reward=   -589.1  cost=    589.1  eps=0.860
+[2026-05-19 10:39:56] [INFO] rl.train ::   ep   60/300  day=573  reward=   -579.1  cost=    579.1  eps=0.740
+[2026-05-19 10:40:06] [INFO] rl.train ::   ep   90/300  day=523  reward=   -530.9  cost=    530.9  eps=0.637
+[2026-05-19 10:40:15] [INFO] rl.train ::   ep  120/300  day=481  reward=   -545.0  cost=    545.0  eps=0.548
+[2026-05-19 10:40:24] [INFO] rl.train ::   ep  150/300  day=689  reward=   -674.5  cost=    674.5  eps=0.471
+[2026-05-19 10:40:33] [INFO] rl.train ::   ep  180/300  day=738  reward=   -685.9  cost=    685.9  eps=0.406
+[2026-05-19 10:40:43] [INFO] rl.train ::   ep  210/300  day=195  reward=   -541.5  cost=    541.5  eps=0.349
+[2026-05-19 10:40:53] [INFO] rl.train ::   ep  240/300  day=139  reward=   -672.1  cost=    672.1  eps=0.300
+[2026-05-19 10:41:03] [INFO] rl.train ::   ep  270/300  day= 83  reward=   -697.0  cost=    697.0  eps=0.258
+[2026-05-19 10:41:11] [INFO] rl.train ::   ep  300/300  day= 59  reward=   -382.2  cost=    382.2  eps=0.222
+[2026-05-19 10:41:12] [INFO] rl.train ::   ep    1/300  day=451  reward=   -588.6  cost=    588.6  eps=0.995
+[2026-05-19 10:41:20] [INFO] rl.train ::   ep   30/300  day=364  reward=   -553.4  cost=    553.4  eps=0.860
+[2026-05-19 10:41:29] [INFO] rl.train ::   ep   60/300  day=640  reward=   -575.8  cost=    575.8  eps=0.740
+[2026-05-19 10:41:38] [INFO] rl.train ::   ep   90/300  day=656  reward=   -524.6  cost=    524.6  eps=0.637
+[2026-05-19 10:41:48] [INFO] rl.train ::   ep  120/300  day=781  reward=   -504.3  cost=    504.3  eps=0.548
+[2026-05-19 10:42:02] [INFO] rl.train ::   ep  150/300  day=725  reward=   -453.6  cost=    453.6  eps=0.471
+[2026-05-19 10:42:16] [INFO] rl.train ::   ep  180/300  day=390  reward=   -434.4  cost=    434.4  eps=0.406
+[2026-05-19 10:42:29] [INFO] rl.train ::   ep  210/300  day=146  reward=   -477.4  cost=    477.4  eps=0.349
+[2026-05-19 10:42:45] [INFO] rl.train ::   ep  240/300  day=181  reward=  -1091.0  cost=   1091.0  eps=0.300
+[2026-05-19 10:43:00] [INFO] rl.train ::   ep  270/300  day=391  reward=   -685.7  cost=    685.7  eps=0.258
+[2026-05-19 10:43:19] [INFO] rl.train ::   ep  300/300  day=277  reward=   -565.2  cost=    565.2  eps=0.222
+[2026-05-19 10:43:27] [INFO] rl.train ::   ep    1/300  day=223  reward=   -600.0  cost=    600.0  eps=0.995
+[2026-05-19 10:43:58] [INFO] rl.train ::   ep   30/300  day=126  reward=   -586.2  cost=    586.2  eps=0.860
+[2026-05-19 10:44:33] [INFO] rl.train ::   ep   60/300  day=  6  reward=   -569.1  cost=    569.1  eps=0.740
+[2026-05-19 10:45:08] [INFO] rl.train ::   ep   90/300  day=327  reward=   -668.2  cost=    668.2  eps=0.637
+[2026-05-19 10:45:38] [INFO] rl.train ::   ep  120/300  day= 44  reward=   -664.6  cost=    664.6  eps=0.548
+[2026-05-19 10:46:12] [INFO] rl.train ::   ep  150/300  day=202  reward=   -692.6  cost=    692.6  eps=0.471
+[2026-05-19 10:46:48] [INFO] rl.train ::   ep  180/300  day=266  reward=   -682.9  cost=    682.9  eps=0.406
+[2026-05-19 10:47:30] [INFO] rl.train ::   ep  210/300  day=332  reward=   -637.0  cost=    637.0  eps=0.349
+[2026-05-19 10:48:14] [INFO] rl.train ::   ep  240/300  day=296  reward=   -674.6  cost=    674.6  eps=0.300
+[2026-05-19 10:48:59] [INFO] rl.train ::   ep  270/300  day=358  reward=   -664.6  cost=    664.6  eps=0.258
+[2026-05-19 10:49:40] [INFO] rl.train ::   ep  300/300  day=782  reward=   -660.9  cost=    660.9  eps=0.222
+[2026-05-19 11:57:37] [INFO] rl.train ::   ep    1/500  day=504  reward=    -47.1  cost=    585.9  eps=0.995  loss=0.0000  grad_updates=0  buffer=96
+[2026-05-19 11:57:47] [INFO] rl.train ::   ep   50/500  day=202  reward=    -49.5  cost=    608.7  eps=0.778  loss=0.0234  grad_updates=96  buffer=4800
+[2026-05-19 11:57:57] [INFO] rl.train ::   ep  100/500  day= 51  reward=    -46.0  cost=    574.6  eps=0.606  loss=0.0085  grad_updates=96  buffer=9600
+[2026-05-19 11:58:07] [INFO] rl.train ::   ep  150/500  day=689  reward=    -37.9  cost=    477.2  eps=0.471  loss=0.0086  grad_updates=96  buffer=14400
+[2026-05-19 11:58:19] [INFO] rl.train ::   ep  200/500  day=256  reward=    -33.5  cost=    415.3  eps=0.367  loss=0.0107  grad_updates=96  buffer=19200
+[2026-05-19 11:58:32] [INFO] rl.train ::   ep  250/500  day=484  reward=    -32.5  cost=    386.6  eps=0.286  loss=0.0095  grad_updates=96  buffer=24000
+[2026-05-19 11:58:45] [INFO] rl.train ::   ep  300/500  day= 59  reward=    -33.3  cost=    403.9  eps=0.222  loss=0.0039  grad_updates=96  buffer=28800
+[2026-05-19 11:58:59] [INFO] rl.train ::   ep  350/500  day=417  reward=    -29.7  cost=    342.4  eps=0.173  loss=0.0040  grad_updates=96  buffer=33600
+[2026-05-19 11:59:12] [INFO] rl.train ::   ep  400/500  day=343  reward=    -29.5  cost=    341.0  eps=0.135  loss=0.0042  grad_updates=96  buffer=38400
+[2026-05-19 11:59:30] [INFO] rl.train ::   ep  450/500  day= 43  reward=    -29.5  cost=    333.9  eps=0.105  loss=0.0076  grad_updates=96  buffer=43200
+[2026-05-19 11:59:49] [INFO] rl.train ::   ep  500/500  day=741  reward=    -28.9  cost=    328.5  eps=0.082  loss=0.0061  grad_updates=96  buffer=48000
+[2026-05-19 12:04:44] [INFO] rl.train ::   ep    1/500  day=504  reward=    -47.1  cost=    585.9  eps=0.995  loss=0.0000  grad_updates=0  buffer=96
+[2026-05-19 12:05:18] [INFO] rl.train ::   ep   50/500  day=202  reward=    -49.5  cost=    608.7  eps=0.778  loss=0.0234  grad_updates=96  buffer=4800
+[2026-05-19 12:05:44] [INFO] rl.train ::   ep  100/500  day= 51  reward=    -46.0  cost=    574.6  eps=0.606  loss=0.0085  grad_updates=96  buffer=9600
+[2026-05-19 12:06:03] [INFO] rl.train ::   ep  150/500  day=689  reward=    -37.9  cost=    477.2  eps=0.471  loss=0.0086  grad_updates=96  buffer=14400
+[2026-05-19 12:06:27] [INFO] rl.train ::   ep  200/500  day=256  reward=    -33.5  cost=    415.3  eps=0.367  loss=0.0107  grad_updates=96  buffer=19200
+[2026-05-19 12:07:01] [INFO] rl.train ::   ep  250/500  day=484  reward=    -32.5  cost=    386.6  eps=0.286  loss=0.0095  grad_updates=96  buffer=24000
+[2026-05-19 12:07:33] [INFO] rl.train ::   ep  300/500  day= 59  reward=    -33.3  cost=    403.9  eps=0.222  loss=0.0039  grad_updates=96  buffer=28800
+[2026-05-19 12:08:01] [INFO] rl.train ::   ep  350/500  day=417  reward=    -29.7  cost=    342.4  eps=0.173  loss=0.0040  grad_updates=96  buffer=33600
+[2026-05-19 12:08:28] [INFO] rl.train ::   ep  400/500  day=343  reward=    -29.5  cost=    341.0  eps=0.135  loss=0.0042  grad_updates=96  buffer=38400
+[2026-05-19 12:08:53] [INFO] rl.train ::   ep  450/500  day= 43  reward=    -29.5  cost=    333.9  eps=0.105  loss=0.0076  grad_updates=96  buffer=43200
+[2026-05-19 12:09:19] [INFO] rl.train ::   ep  500/500  day=741  reward=    -28.9  cost=    328.5  eps=0.082  loss=0.0061  grad_updates=96  buffer=48000
+[2026-05-19 12:09:39] [INFO] rl.train ::   ep    1/500  day=451  reward=    -46.4  cost=    577.6  eps=0.995  loss=0.0000  grad_updates=0  buffer=96
+[2026-05-19 12:10:05] [INFO] rl.train ::   ep   50/500  day=  8  reward=    -48.6  cost=    607.6  eps=0.778  loss=0.0160  grad_updates=96  buffer=4800
+[2026-05-19 12:10:27] [INFO] rl.train ::   ep  100/500  day=547  reward=    -39.5  cost=    508.2  eps=0.606  loss=0.0165  grad_updates=96  buffer=9600
+[2026-05-19 12:10:51] [INFO] rl.train ::   ep  150/500  day=725  reward=    -39.5  cost=    488.4  eps=0.471  loss=0.0180  grad_updates=96  buffer=14400
+[2026-05-19 12:11:19] [INFO] rl.train ::   ep  200/500  day=559  reward=    -33.5  cost=    406.4  eps=0.367  loss=0.0111  grad_updates=96  buffer=19200
+[2026-05-19 12:11:41] [INFO] rl.train ::   ep  250/500  day=124  reward=    -33.1  cost=    406.9  eps=0.286  loss=0.0230  grad_updates=96  buffer=24000
+[2026-05-19 12:12:07] [INFO] rl.train ::   ep  300/500  day=277  reward=    -33.1  cost=    391.4  eps=0.222  loss=0.0404  grad_updates=96  buffer=28800
+[2026-05-19 12:12:32] [INFO] rl.train ::   ep  350/500  day=463  reward=    -33.7  cost=    389.3  eps=0.173  loss=0.0285  grad_updates=96  buffer=33600
+[2026-05-19 12:13:00] [INFO] rl.train ::   ep  400/500  day=332  reward=    -30.9  cost=    357.5  eps=0.135  loss=0.0318  grad_updates=96  buffer=38400
+[2026-05-19 12:13:26] [INFO] rl.train ::   ep  450/500  day=357  reward=    -31.4  cost=    370.2  eps=0.105  loss=0.0222  grad_updates=96  buffer=43200
+[2026-05-19 12:14:03] [INFO] rl.train ::   ep  500/500  day=754  reward=    -29.2  cost=    326.2  eps=0.082  loss=0.0120  grad_updates=96  buffer=48000
+[2026-05-19 12:14:42] [INFO] rl.train ::   ep    1/500  day=223  reward=    -49.6  cost=    618.3  eps=0.995  loss=0.0000  grad_updates=0  buffer=96
+[2026-05-19 12:15:16] [INFO] rl.train ::   ep   50/500  day=176  reward=    -45.7  cost=    562.4  eps=0.778  loss=0.0300  grad_updates=96  buffer=4800
+[2026-05-19 12:16:03] [INFO] rl.train ::   ep  100/500  day=283  reward=    -43.2  cost=    536.5  eps=0.606  loss=0.0291  grad_updates=96  buffer=9600
+[2026-05-19 12:17:12] [INFO] rl.train ::   ep  150/500  day=202  reward=    -40.8  cost=    501.4  eps=0.471  loss=0.0163  grad_updates=96  buffer=14400
+[2026-05-19 12:18:23] [INFO] rl.train ::   ep  200/500  day=124  reward=    -35.5  cost=    429.2  eps=0.367  loss=0.0229  grad_updates=96  buffer=19200
+[2026-05-19 12:19:01] [INFO] rl.train ::   ep  250/500  day=679  reward=    -33.3  cost=    388.8  eps=0.286  loss=0.0136  grad_updates=96  buffer=24000
+[2026-05-19 12:20:18] [INFO] rl.train ::   ep  300/500  day=782  reward=    -34.1  cost=    411.3  eps=0.222  loss=0.0100  grad_updates=96  buffer=28800
+[2026-05-19 12:21:01] [INFO] rl.train ::   ep  350/500  day=170  reward=    -31.5  cost=    350.2  eps=0.173  loss=0.0095  grad_updates=96  buffer=33600
+[2026-05-19 12:21:57] [INFO] rl.train ::   ep  400/500  day=114  reward=    -32.2  cost=    373.5  eps=0.135  loss=0.0068  grad_updates=96  buffer=38400
+[2026-05-19 12:23:00] [INFO] rl.train ::   ep  450/500  day=627  reward=    -31.0  cost=    346.8  eps=0.105  loss=0.0076  grad_updates=96  buffer=43200
+[2026-05-19 12:24:24] [INFO] rl.train ::   ep  500/500  day=342  reward=    -31.1  cost=    341.9  eps=0.082  loss=0.0090  grad_updates=96  buffer=48000

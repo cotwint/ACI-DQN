@@ -1,0 +1,41 @@
+[2026-05-19 08:46:30] [INFO] run_all :: Config  : config.yaml
+[2026-05-19 08:46:30] [INFO] run_all :: Stages  : ['preprocess', 'greedy', 'dqn', 'evaluate', 'report']
+[2026-05-19 08:46:30] [INFO] run_all :: Seed    : 2024
+[2026-05-19 08:46:30] [INFO] run_all :: ============================================================
+[2026-05-19 08:46:30] [INFO] run_all :: STAGE 1: Data preprocessing
+[2026-05-19 08:46:30] [INFO] run_all :: ============================================================
+[2026-05-19 08:46:31] [INFO] run_all :: Preprocessing complete.
+[2026-05-19 08:46:31] [INFO] run_all :: ============================================================
+[2026-05-19 08:46:31] [INFO] run_all :: STAGE 2: Greedy baseline evaluation
+[2026-05-19 08:46:31] [INFO] run_all :: ============================================================
+[2026-05-19 08:46:32] [INFO] run_all ::   Test days: 267
+[2026-05-19 08:46:39] [INFO] run_all ::   Greedy  avg_cost=2224.99  viol_p1=0.0000
+[2026-05-19 08:46:39] [INFO] run_all :: ============================================================
+[2026-05-19 08:46:39] [INFO] run_all :: STAGE 3: DQN training
+[2026-05-19 08:46:39] [INFO] run_all :: ============================================================
+[2026-05-19 08:46:42] [INFO] run_all ::   Train days: 798
+[2026-05-19 08:46:42] [INFO] run_all :: DQN training on device: cpu
+[2026-05-19 08:47:01] [INFO] run_all ::   ep   50 | reward -7.6 | cost 757.9 | viol_p1 0.000 | ε 0.778
+[2026-05-19 08:47:01] [INFO] run_all ::   ep  100 | reward -7.8 | cost 782.0 | viol_p1 0.000 | ε 0.606
+[2026-05-19 08:47:02] [INFO] run_all ::   ep  150 | reward -8.0 | cost 795.5 | viol_p1 0.000 | ε 0.471
+[2026-05-19 08:47:02] [INFO] run_all ::   ep  200 | reward -7.5 | cost 750.9 | viol_p1 0.000 | ε 0.367
+[2026-05-19 08:47:03] [INFO] run_all ::   ep  250 | reward -7.4 | cost 737.4 | viol_p1 0.000 | ε 0.286
+[2026-05-19 08:47:03] [INFO] run_all ::   ep  300 | reward -8.3 | cost 826.4 | viol_p1 0.000 | ε 0.222
+[2026-05-19 08:47:03] [INFO] run_all ::   Training history saved → outputs\dqn_training_history.csv
+[2026-05-19 08:47:03] [INFO] run_all ::   Model saved → outputs\dqn_model.pt
+[2026-05-19 08:47:03] [INFO] run_all :: ============================================================
+[2026-05-19 08:47:03] [INFO] run_all :: STAGE 4: DQN evaluation on test days
+[2026-05-19 08:47:03] [INFO] run_all :: ============================================================
+[2026-05-19 08:47:04] [INFO] run_all ::   Test days: 267
+[2026-05-19 08:47:05] [INFO] run_all ::   DQN     avg_cost=469.34  viol_p1=0.0000
+[2026-05-19 08:47:05] [INFO] run_all :: ============================================================
+[2026-05-19 08:47:05] [INFO] run_all :: STAGE 5: Summary report
+[2026-05-19 08:47:05] [INFO] run_all :: ============================================================
+[2026-05-19 08:47:05] [INFO] run_all ::   Full results → outputs\experiment_summary.csv
+[2026-05-19 08:47:05] [INFO] run_all :: 
+        avg_total_cost  avg_energy_cost  avg_sla_cost  avg_util  viol_rate_p1
+policy                                                                       
+dqn         469.335103       462.035103      0.000000  0.228606           0.0
+greedy     2224.993030       203.968311   2021.024719  0.999978           0.0
+[2026-05-19 08:47:05] [INFO] run_all :: 
+All stages done in 35.0s.

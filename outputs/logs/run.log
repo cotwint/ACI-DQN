@@ -1,0 +1,159 @@
+[2026-05-19 10:39:01] [INFO] main :: Config: config.yaml
+[2026-05-19 10:39:01] [INFO] main :: Methods: ['fixed', 'queue_greedy', 'price_aware_greedy', 'dqn', 'aci_dqn', 'dtaci_dqn']
+[2026-05-19 10:39:01] [INFO] main :: Seed: 2024
+[2026-05-19 10:39:01] [INFO] main :: ============================================================
+[2026-05-19 10:39:01] [INFO] main :: STAGE: Building environment and data splits
+[2026-05-19 10:39:01] [INFO] main :: ============================================================
+[2026-05-19 10:39:18] [INFO] main ::   Train days: 798
+[2026-05-19 10:39:18] [INFO] main ::   Calibration days: 266
+[2026-05-19 10:39:18] [INFO] main ::   Test days: 267
+[2026-05-19 10:39:18] [INFO] main :: ============================================================
+[2026-05-19 10:39:18] [INFO] main :: METHOD: fixed
+[2026-05-19 10:39:18] [INFO] main :: ============================================================
+[2026-05-19 10:39:18] [INFO] main ::   Running fixed on 267 test days ...
+[2026-05-19 10:39:22] [INFO] main :: ============================================================
+[2026-05-19 10:39:22] [INFO] main :: METHOD: queue_greedy
+[2026-05-19 10:39:22] [INFO] main :: ============================================================
+[2026-05-19 10:39:22] [INFO] main ::   Running queue_greedy on 267 test days ...
+[2026-05-19 10:39:28] [INFO] main :: ============================================================
+[2026-05-19 10:39:28] [INFO] main :: METHOD: price_aware_greedy
+[2026-05-19 10:39:28] [INFO] main :: ============================================================
+[2026-05-19 10:39:28] [INFO] main ::   Running price_aware_greedy on 267 test days ...
+[2026-05-19 10:39:35] [INFO] main :: ============================================================
+[2026-05-19 10:39:35] [INFO] main :: METHOD: dqn
+[2026-05-19 10:39:35] [INFO] main :: ============================================================
+[2026-05-19 10:39:38] [INFO] main ::   Training dqn for 300 episodes ...
+[2026-05-19 10:41:11] [INFO] main ::   Evaluating dqn on 50 test days ...
+[2026-05-19 10:41:12] [INFO] main :: ============================================================
+[2026-05-19 10:41:12] [INFO] main :: METHOD: aci_dqn
+[2026-05-19 10:41:12] [INFO] main :: ============================================================
+[2026-05-19 10:41:12] [INFO] main ::   Warmed up aci_dqn conformal learners on 266 calibration days.
+[2026-05-19 10:41:12] [INFO] main ::   Training aci_dqn for 300 episodes ...
+[2026-05-19 10:43:19] [INFO] main ::   Evaluating aci_dqn on 50 test days ...
+[2026-05-19 10:43:26] [INFO] main :: ============================================================
+[2026-05-19 10:43:26] [INFO] main :: METHOD: dtaci_dqn
+[2026-05-19 10:43:26] [INFO] main :: ============================================================
+[2026-05-19 10:43:26] [INFO] main ::   Warmed up dtaci_dqn conformal learners on 266 calibration days.
+[2026-05-19 10:43:26] [INFO] main ::   Training dtaci_dqn for 300 episodes ...
+[2026-05-19 10:49:40] [INFO] main ::   Evaluating dtaci_dqn on 50 test days ...
+[2026-05-19 10:50:11] [INFO] main :: ============================================================
+[2026-05-19 10:50:11] [INFO] main :: STAGE: Summary report
+[2026-05-19 10:50:11] [INFO] main :: ============================================================
+[2026-05-19 10:50:11] [INFO] main ::   Daily results -> outputs\daily_results.csv
+[2026-05-19 10:50:11] [INFO] main ::   Experiment summary -> outputs\experiment_summary.csv
+[2026-05-19 10:50:11] [INFO] main :: 
+               method  total_objective_cost  electricity_cost  qos_cost  P1_sla_violation_rate  average_utilization
+0        queue_greedy            328.909142        269.324124     0.000                    0.0             0.995645
+1  price_aware_greedy            330.223223        264.093260     0.000                    0.0             0.995497
+2               fixed            415.280575        409.680575     0.000                    0.0             0.282656
+3                 dqn            464.434075        249.208075   214.626                    0.0             0.999813
+4           dtaci_dqn            593.388698        582.188698     0.000                    0.0             0.158218
+5             aci_dqn           2003.415800        203.968800  1799.447                    0.0             1.000000
+[2026-05-19 10:50:11] [INFO] main :: ============================================================
+[2026-05-19 10:50:11] [INFO] main :: STAGE: Generating figures
+[2026-05-19 10:50:11] [INFO] main :: ============================================================
+[2026-05-19 10:50:13] [INFO] main ::   Figures saved to outputs\figures
+[2026-05-19 10:50:13] [INFO] main :: 
+All done in 671.9s.
+[2026-05-19 11:56:50] [INFO] main :: Config: config.yaml
+[2026-05-19 11:56:50] [INFO] main :: Methods: ['fixed', 'queue_greedy', 'price_aware_greedy', 'dqn']
+[2026-05-19 11:56:50] [INFO] main :: Seed: 2024
+[2026-05-19 11:56:50] [INFO] main :: ============================================================
+[2026-05-19 11:56:50] [INFO] main :: STAGE: Building environment and data splits
+[2026-05-19 11:56:50] [INFO] main :: ============================================================
+[2026-05-19 11:57:06] [INFO] main ::   Train days: 798
+[2026-05-19 11:57:06] [INFO] main ::   Calibration days: 266
+[2026-05-19 11:57:06] [INFO] main ::   Test days: 267
+[2026-05-19 11:57:06] [INFO] main :: ============================================================
+[2026-05-19 11:57:06] [INFO] main :: METHOD: fixed
+[2026-05-19 11:57:06] [INFO] main :: ============================================================
+[2026-05-19 11:57:06] [INFO] main ::   Running fixed on 267 test days ...
+[2026-05-19 11:57:12] [INFO] main :: ============================================================
+[2026-05-19 11:57:12] [INFO] main :: METHOD: queue_greedy
+[2026-05-19 11:57:12] [INFO] main :: ============================================================
+[2026-05-19 11:57:12] [INFO] main ::   Running queue_greedy on 267 test days ...
+[2026-05-19 11:57:18] [INFO] main :: ============================================================
+[2026-05-19 11:57:18] [INFO] main :: METHOD: price_aware_greedy
+[2026-05-19 11:57:18] [INFO] main :: ============================================================
+[2026-05-19 11:57:18] [INFO] main ::   Running price_aware_greedy on 267 test days ...
+[2026-05-19 11:57:25] [INFO] main :: ============================================================
+[2026-05-19 11:57:25] [INFO] main :: METHOD: dqn
+[2026-05-19 11:57:25] [INFO] main :: ============================================================
+[2026-05-19 11:57:37] [INFO] main ::   Training dqn for 500 episodes ...
+[2026-05-19 11:59:49] [INFO] main ::   Saved model to outputs\models\dqn.pt
+[2026-05-19 11:59:49] [INFO] main ::   Training history -> outputs\dqn_training_history.csv
+[2026-05-19 11:59:49] [INFO] main ::   Evaluating dqn on 267 test days ...
+[2026-05-19 12:00:10] [INFO] main :: ============================================================
+[2026-05-19 12:00:10] [INFO] main :: STAGE: Summary report
+[2026-05-19 12:00:10] [INFO] main :: ============================================================
+[2026-05-19 12:00:10] [INFO] main ::   Daily results -> outputs\daily_results.csv
+[2026-05-19 12:00:10] [INFO] main ::   Experiment summary -> outputs\experiment_summary.csv
+[2026-05-19 12:00:10] [INFO] main ::   Action distribution -> outputs\action_distribution.csv
+[2026-05-19 12:00:10] [INFO] main :: 
+               method  total_objective_cost  electricity_cost  qos_cost  P1_sla_violation_rate  average_utilization
+0                 dqn            285.187987        252.704466  4.292135                    0.0             0.987306
+1        queue_greedy            327.656444        268.951575  0.000000                    0.0             0.996157
+2  price_aware_greedy            329.403273        263.682299  0.000000                    0.0             0.996258
+3               fixed            415.040424        409.440424  0.000000                    0.0             0.281455
+[2026-05-19 12:00:10] [INFO] main :: 
+All done in 200.0s.
+[2026-05-19 12:03:53] [INFO] main :: Config: config.yaml
+[2026-05-19 12:03:53] [INFO] main :: Methods: ['fixed', 'queue_greedy', 'price_aware_greedy', 'dqn', 'aci_dqn', 'dtaci_dqn']
+[2026-05-19 12:03:53] [INFO] main :: Seed: 2024
+[2026-05-19 12:03:53] [INFO] main :: ============================================================
+[2026-05-19 12:03:53] [INFO] main :: STAGE: Building environment and data splits
+[2026-05-19 12:03:53] [INFO] main :: ============================================================
+[2026-05-19 12:04:17] [INFO] main ::   Train days: 798
+[2026-05-19 12:04:17] [INFO] main ::   Calibration days: 266
+[2026-05-19 12:04:17] [INFO] main ::   Test days: 267
+[2026-05-19 12:04:17] [INFO] main :: ============================================================
+[2026-05-19 12:04:17] [INFO] main :: METHOD: fixed
+[2026-05-19 12:04:17] [INFO] main :: ============================================================
+[2026-05-19 12:04:17] [INFO] main ::   Running fixed on 267 test days ...
+[2026-05-19 12:04:22] [INFO] main :: ============================================================
+[2026-05-19 12:04:22] [INFO] main :: METHOD: queue_greedy
+[2026-05-19 12:04:22] [INFO] main :: ============================================================
+[2026-05-19 12:04:22] [INFO] main ::   Running queue_greedy on 267 test days ...
+[2026-05-19 12:04:30] [INFO] main :: ============================================================
+[2026-05-19 12:04:30] [INFO] main :: METHOD: price_aware_greedy
+[2026-05-19 12:04:30] [INFO] main :: ============================================================
+[2026-05-19 12:04:30] [INFO] main ::   Running price_aware_greedy on 267 test days ...
+[2026-05-19 12:04:40] [INFO] main :: ============================================================
+[2026-05-19 12:04:40] [INFO] main :: METHOD: dqn
+[2026-05-19 12:04:40] [INFO] main :: ============================================================
+[2026-05-19 12:04:44] [INFO] main ::   Training dqn for 500 episodes ...
+[2026-05-19 12:09:19] [INFO] main ::   Saved model to outputs\models\dqn.pt
+[2026-05-19 12:09:19] [INFO] main ::   Training history -> outputs\dqn_training_history.csv
+[2026-05-19 12:09:19] [INFO] main ::   Evaluating dqn on 267 test days ...
+[2026-05-19 12:09:39] [INFO] main :: ============================================================
+[2026-05-19 12:09:39] [INFO] main :: METHOD: aci_dqn
+[2026-05-19 12:09:39] [INFO] main :: ============================================================
+[2026-05-19 12:09:39] [INFO] main ::   Warmed up aci_dqn conformal learners on 266 calibration days.
+[2026-05-19 12:09:39] [INFO] main ::   Training aci_dqn for 500 episodes ...
+[2026-05-19 12:14:03] [INFO] main ::   Saved model to outputs\models\aci_dqn.pt
+[2026-05-19 12:14:03] [INFO] main ::   Training history -> outputs\aci_dqn_training_history.csv
+[2026-05-19 12:14:03] [INFO] main ::   Evaluating aci_dqn on 267 test days ...
+[2026-05-19 12:14:42] [INFO] main :: ============================================================
+[2026-05-19 12:14:42] [INFO] main :: METHOD: dtaci_dqn
+[2026-05-19 12:14:42] [INFO] main :: ============================================================
+[2026-05-19 12:14:42] [INFO] main ::   Warmed up dtaci_dqn conformal learners on 266 calibration days.
+[2026-05-19 12:14:42] [INFO] main ::   Training dtaci_dqn for 500 episodes ...
+[2026-05-19 12:24:24] [INFO] main ::   Saved model to outputs\models\dtaci_dqn.pt
+[2026-05-19 12:24:24] [INFO] main ::   Training history -> outputs\dtaci_dqn_training_history.csv
+[2026-05-19 12:24:24] [INFO] main ::   Evaluating dtaci_dqn on 267 test days ...
+[2026-05-19 12:27:38] [INFO] main :: ============================================================
+[2026-05-19 12:27:38] [INFO] main :: STAGE: Summary report
+[2026-05-19 12:27:38] [INFO] main :: ============================================================
+[2026-05-19 12:27:39] [INFO] main ::   Daily results -> outputs\daily_results.csv
+[2026-05-19 12:27:39] [INFO] main ::   Experiment summary -> outputs\experiment_summary.csv
+[2026-05-19 12:27:39] [INFO] main ::   Action distribution -> outputs\action_distribution.csv
+[2026-05-19 12:27:39] [INFO] main :: 
+               method  total_objective_cost  electricity_cost  qos_cost  P1_sla_violation_rate  average_utilization
+0                 dqn            285.187987        252.704466  4.292135                    0.0             0.987306
+1             aci_dqn            304.231814        261.377133  7.462921                    0.0             0.913245
+2           dtaci_dqn            321.446537        292.279871  0.000000                    0.0             0.933483
+3        queue_greedy            327.656444        268.951575  0.000000                    0.0             0.996157
+4  price_aware_greedy            329.403273        263.682299  0.000000                    0.0             0.996258
+5               fixed            415.040424        409.440424  0.000000                    0.0             0.281455
+[2026-05-19 12:27:39] [INFO] main :: 
+All done in 1425.7s.

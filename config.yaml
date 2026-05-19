@@ -1,0 +1,122 @@
+# ============================================================
+# config.yaml -- Compute-Power Datacenter Co-optimization Project
+# All experiment parameters are kept here so individual scripts
+# stay tidy. Override at the CLI with --config <yaml>.
+# ============================================================
+
+# ----- Paths --------------------------------------------------
+paths:
+  raw_csv: "区域负荷2020-2023数据.csv"     # provided regional load data
+  processed_dir: "outputs/processed"
+  figures_dir: "outputs/figures"
+  logs_dir: "outputs/logs"
+  outputs_dir: "outputs"
+  models_dir: "outputs/models"
+
+# ----- Time discretisation -----------------------------------
+time:
+  slots_per_day: 96      # 15-min slots
+  dt_hour: 0.25
+
+# ----- Server / capacity parameters --------------------------
+server:
+  Nmin: 8
+  Nmax: 120
+  cap_per_server: 1.0    # mu * dt, compute units per server per slot
+  target_util: 0.75
+  ramp_limit: 25
+
+# ----- Power model --------------------------------------------
+power:
+  P_idle: 0.18           # kW per server, idle
+  P_peak: 0.42           # kW per server, peak
+  P_fixed: 8.0           # kW fixed IT (network/storage/etc.)
+  PUE: 1.35
+  power_gamma: 1.15
+  switch_cost: 0.10      # cost per |Delta n| (CNY-equivalent)
+
+# ----- QoS parameters (one entry per priority k=1..3) --------
+qos:
+  K: 3
+  deadline_slots: [2, 8, 32]      # D_k in slots
+  service_mean:  [0.60, 1.20, 4.00] # mean compute requirement per task
+  service_std:   [0.10, 0.25, 0.80]
+  sla_penalty:   [50.0, 20.0, 5.0]   # beta_k per completed violation (increased)
+  overdue_penalty: [2.0, 0.8, 0.2]   # rho_k per pending overdue task (increased)
+
+# ----- Time-of-use electricity price -------------------------
+price:
+  low: 0.32
+  middle: 0.55
+  high: 0.95
+  high_hours:   [10, 11, 14, 15, 19, 20]
+  middle_hours: [8, 9, 12, 13, 16, 17, 18, 21]
+  # everything else is low
+
+# ----- Workload generator ------------------------------------
+workload:
+  p1: {a: 1.0, b: 6.0, c: 2.0}
+  p2: {a: 2.0, b: 4.0, c: 2.0}
+  p3: {a: 0.5, b: 3.5, c: 2.0}
+  business_hours: [9, 18]          # [start, end) hour-of-day
+  evening_hours:  [18, 23]
+  night_hours:    [0, 6]
+  seed_offset: 0
+
+# ----- Data split --------------------------------------------
+split:
+  train_ratio: 0.60
+  cal_ratio:   0.20
+  test_ratio:  0.20
+
+# ----- Conformal Prediction ----------------------------------
+conformal:
+  alpha: 0.10
+  horizon: 4               # H steps ahead used by action shield
+  alpha_min: 0.005
+  alpha_max: 0.30
+  aci_eta: 0.05
+  dtaci_etas: [0.005, 0.02, 0.05, 0.1, 0.25]
+  dtaci_sigma: 0.10
+  dtaci_meta_lr: 0.10
+  protect_priorities: [1, 2]   # K' in action shield (only P1+P2)
+  forecaster: rolling_mean
+  rolling_window: 8
+  # Clipping for upper bounds (prevent extreme values)
+  upper_bound_clip_method: p95   # "p95", "2x_forecast", or "none"
+  lambda_scale: 20.0             # normalization divisor for conformal features
+
+# ----- RL training -------------------------------------------
+rl:
+  algorithm: DQN
+  action_bins: 21
+  gamma: 0.99
+  lr: 0.0005
+  batch_size: 64
+  replay_size: 50000
+  train_episodes: 500
+  eval_episodes: 50
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay: 0.995
+  target_update_interval: 200    # gradient steps
+  learning_starts: 200           # start training early (~2 episodes)
+  hidden_sizes: [128, 128]
+  reward_scale: 1.0               # env already normalises reward components
+  max_grad_norm: 5.0
+  # Reward component weights (applied per-step in env)
+  reward_weights:
+    elec: 1.0
+    qos: 5.0
+    switch: 0.2
+  # Reward normalisation scales (divide each component before weighting)
+  reward_scales:
+    elec: 10.0
+    qos: 10.0
+    switch: 5.0
+
+# ----- Random seed -------------------------------------------
+seed: 2024
+
+# ----- Verbose flag for logging -----------------------------
+verbose: true

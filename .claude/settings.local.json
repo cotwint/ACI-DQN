@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(pip install *)",
+      "Bash(python -m pip install pytest -q)",
+      "Bash(where python *)",
+      "Bash(.venv/Scripts/pip install *)",
+      "Bash(.venv/Scripts/python -m pytest tests/ -v)",
+      "Bash(python -m ensurepip)",
+      "Bash(python main.py --help)",
+      "Bash(python main.py --method fixed queue_greedy price_aware_greedy dqn --skip-preprocess --no-plots --seed 2024)"
+    ]
+  }
+}

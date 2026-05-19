@@ -1,0 +1,30 @@
+[2026-05-19 08:56:04] [INFO] rl.train ::   ep    1/300  day=451  reward=   -599.9  cost=    599.9  eps=0.995
+[2026-05-19 08:56:15] [INFO] rl.train ::   ep   30/300  day=364  reward=   -545.9  cost=    545.9  eps=0.860
+[2026-05-19 08:56:26] [INFO] rl.train ::   ep   60/300  day=640  reward=   -579.3  cost=    579.3  eps=0.740
+[2026-05-19 08:56:41] [INFO] rl.train ::   ep   90/300  day=656  reward=   -510.7  cost=    510.7  eps=0.637
+[2026-05-19 08:57:00] [INFO] rl.train ::   ep  120/300  day=781  reward=   -469.9  cost=    469.9  eps=0.548
+[2026-05-19 08:57:19] [INFO] rl.train ::   ep  150/300  day=725  reward=   -488.2  cost=    488.2  eps=0.471
+[2026-05-19 08:57:37] [INFO] rl.train ::   ep  180/300  day=390  reward=   -386.3  cost=    386.3  eps=0.406
+[2026-05-19 08:57:55] [INFO] rl.train ::   ep  210/300  day=146  reward=   -417.0  cost=    417.0  eps=0.349
+[2026-05-19 09:01:55] [INFO] rl.train ::   ep    1/300  day=451  reward=   -607.4  cost=    607.4  eps=0.995
+[2026-05-19 09:02:16] [INFO] rl.train ::   ep   30/300  day=364  reward=   -632.6  cost=    632.6  eps=0.860
+[2026-05-19 09:02:48] [INFO] rl.train ::   ep   60/300  day=640  reward=   -551.8  cost=    551.8  eps=0.740
+[2026-05-19 09:03:33] [INFO] rl.train ::   ep   90/300  day=656  reward=   -511.9  cost=    511.9  eps=0.637
+[2026-05-19 09:04:07] [INFO] rl.train ::   ep  120/300  day=781  reward=   -488.3  cost=    488.3  eps=0.548
+[2026-05-19 09:04:30] [INFO] rl.train ::   ep  150/300  day=725  reward=   -435.6  cost=    435.6  eps=0.471
+[2026-05-19 09:04:45] [INFO] rl.train ::   ep  180/300  day=390  reward=   -443.4  cost=    443.4  eps=0.406
+[2026-05-19 09:05:00] [INFO] rl.train ::   ep  210/300  day=146  reward=   -383.5  cost=    383.5  eps=0.349
+[2026-05-19 09:05:18] [INFO] rl.train ::   ep  240/300  day=181  reward=   -576.4  cost=    576.4  eps=0.300
+[2026-05-19 09:05:40] [INFO] rl.train ::   ep  270/300  day=391  reward=   -396.6  cost=    396.6  eps=0.258
+[2026-05-19 09:06:12] [INFO] rl.train ::   ep  300/300  day=277  reward=   -525.5  cost=    525.5  eps=0.222
+[2026-05-19 09:06:52] [INFO] rl.train ::   ep    1/300  day=223  reward=   -568.4  cost=    568.4  eps=0.995
+[2026-05-19 09:07:35] [INFO] rl.train ::   ep   30/300  day=126  reward=   -564.4  cost=    564.4  eps=0.860
+[2026-05-19 09:08:17] [INFO] rl.train ::   ep   60/300  day=  6  reward=   -539.2  cost=    539.2  eps=0.740
+[2026-05-19 09:08:50] [INFO] rl.train ::   ep   90/300  day=327  reward=   -680.9  cost=    680.9  eps=0.637
+[2026-05-19 09:09:18] [INFO] rl.train ::   ep  120/300  day= 44  reward=   -681.2  cost=    681.2  eps=0.548
+[2026-05-19 09:09:50] [INFO] rl.train ::   ep  150/300  day=202  reward=   -696.8  cost=    696.8  eps=0.471
+[2026-05-19 09:10:19] [INFO] rl.train ::   ep  180/300  day=266  reward=   -678.7  cost=    678.7  eps=0.406
+[2026-05-19 09:10:49] [INFO] rl.train ::   ep  210/300  day=332  reward=   -646.5  cost=    646.5  eps=0.349
+[2026-05-19 09:11:23] [INFO] rl.train ::   ep  240/300  day=296  reward=   -663.3  cost=    663.3  eps=0.300
+[2026-05-19 09:12:02] [INFO] rl.train ::   ep  270/300  day=358  reward=   -670.4  cost=    670.4  eps=0.258
+[2026-05-19 09:12:39] [INFO] rl.train ::   ep  300/300  day=782  reward=   -631.0  cost=    631.0  eps=0.222
