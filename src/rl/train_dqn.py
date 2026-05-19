@@ -25,7 +25,7 @@ from typing import Callable, Dict, List, Optional
 import numpy as np
 import torch
 
-from ..datacenter_env import DataCenterEnv
+from ..datacenter_env import DataCenterEnv, action_to_n
 from ..utils import get_logger, ensure_dir
 from .dqn_agent import DQNAgent
 
@@ -43,8 +43,9 @@ class IdentityAugmenter:
     def augment(self, state, env):
         return state
 
-    def shield(self, action, state, env):
-        return action
+    def shield(self, n_servers, state, env):
+        # n_servers is already a server count (converted in rollout_episode).
+        return int(n_servers)
 
     def on_step(self, env, info, action_pre, action_post):
         pass
@@ -94,12 +95,15 @@ def rollout_episode(env: DataCenterEnv,
     while not env.done:
         a_raw = (agent.select_action(s_aug, greedy=not train)
                  if agent is not None else 0)
-        a_safe = augmenter.shield(a_raw, s_aug, env)
+        # Convert discrete action index to server count BEFORE shield/env.
+        a_n = action_to_n(a_raw, env.cfg)
+        a_safe = augmenter.shield(a_n, s_aug, env)
         next_state, reward, done, info = env.step(a_safe)
         s2_aug = augmenter.augment(next_state, env)
         augmenter.on_step(env, info, a_raw, a_safe)
         if train and agent is not None:
-            agent.push(s_aug, a_safe, reward, s2_aug, done)
+            # Store discrete action index (0..bins-1) so Q-network sees its action space.
+            agent.push(s_aug, a_raw, reward, s2_aug, done)
             loss = agent.train_step()
             if loss is not None:
                 losses.append(loss)

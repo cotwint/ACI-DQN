@@ -161,13 +161,14 @@ class ConformalAugmenter:
         return np.concatenate([state, extra]).astype(np.float32)
 
     # ------------------------------------------------------------------
-    def shield(self, action: int, state, env: DataCenterEnv) -> int:
+    def shield(self, n_servers: int, state, env: DataCenterEnv) -> int:
+        # n_servers is already a server count (converted in rollout_episode).
+        # Shield returns the (possibly adjusted) server count.
         if self._shield_obj is None or self._cached_hi is None:
-            return int(action)
-        n_rl = action_to_n(int(action), env.cfg)
+            return int(n_servers)
         q_lengths = np.array([len(q) for q in env.queues], dtype=np.float64)
-        n_safe = self._shield_obj.filter(n_rl, q_lengths, self._cached_hi)
-        return n_to_action(n_safe, env.cfg)
+        n_safe = self._shield_obj.filter(int(n_servers), q_lengths, self._cached_hi)
+        return int(n_safe)
 
     # ------------------------------------------------------------------
     def on_step(self, env: DataCenterEnv, info: dict,

@@ -10,7 +10,18 @@
       "Bash(.venv/Scripts/python -m pytest tests/ -v)",
       "Bash(python -m ensurepip)",
       "Bash(python main.py --help)",
-      "Bash(python main.py --method fixed queue_greedy price_aware_greedy dqn --skip-preprocess --no-plots --seed 2024)"
+      "Bash(python main.py --method fixed queue_greedy price_aware_greedy dqn --skip-preprocess --no-plots --seed 2024)",
+      "Bash(python main.py --all --skip-preprocess --no-plots --seed 2024)",
+      "Bash(python analysis_plots.py)",
+      "Bash(.venv/Scripts/python -c \"import seaborn; print\\(seaborn.__version__\\)\")",
+      "Bash(.venv/Scripts/pip.exe install *)",
+      "Bash(.venv/Scripts/pip3.exe install *)",
+      "Bash(.venv/Scripts/python.exe analysis_plots.py)",
+      "Bash(.venv/Scripts/python.exe stress_test_scenarios.py)",
+      "Bash(.venv/Scripts/python.exe generate_figures.py)",
+      "Bash(python generate_figures.py)",
+      "Bash(python _explore_trace.py)",
+      "Bash(python trace_preprocess.py)"
     ]
   }
 }
