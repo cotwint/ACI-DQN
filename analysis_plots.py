@@ -40,15 +40,30 @@ set_global_seed(2024)
 env, splits, norm = build_env_and_splits(cfg)
 daily_df = pd.read_csv("outputs/daily_results.csv")
 
+# 9-method palette
+C9 = {
+    'fixed': '#607D8B', 'queue_greedy': '#4CAF50',
+    'price_aware_greedy': '#8BC34A', 'forecast_greedy': '#00BCD4',
+    'conformal_greedy': '#FF5722', 'dqn': '#2196F3',
+    'forecast_dqn': '#3F51B5', 'static_conformal_dqn': '#795548',
+    'aci_dqn': '#9C27B0',
+}
+ORDER9 = ['fixed', 'queue_greedy', 'price_aware_greedy',
+          'forecast_greedy', 'conformal_greedy',
+          'dqn', 'forecast_dqn', 'static_conformal_dqn', 'aci_dqn']
+LABELS9 = ['Fixed', 'Queue-\nGreedy', 'Price-Aware\nGreedy',
+           'Forecast-\nGreedy', 'Conformal-\nGreedy',
+           'DQN', 'Forecast-\nDQN', 'Static-C.\nDQN', 'ACI-DQN']
+
 # =========================================================================
 # Figure 1: Cost decomposition bar chart
 # =========================================================================
 def fig1_cost_decomposition():
     summary = pd.read_csv("outputs/experiment_summary.csv")
-    order = ['fixed', 'queue_greedy', 'price_aware_greedy', 'dqn', 'aci_dqn', 'dtaci_dqn']
-    labels = ['Fixed', 'Queue-\nGreedy', 'Price-Aware\nGreedy', 'DQN', 'ACI-DQN', 'DtACI-DQN']
+    order = ORDER9
+    labels = LABELS9
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(18, 5))
 
     # Cost breakdown
     ax = axes[0]
@@ -61,7 +76,7 @@ def fig1_cost_decomposition():
     ax.bar(x, qos, w, label='QoS Penalty', color='#F44336')
     ax.bar(x + w, switch, w, label='Switching', color='#FF9800')
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9)
+    ax.set_xticklabels(labels, fontsize=7)
     ax.set_ylabel('Cost (CNY/day)')
     ax.set_title('(a) Cost Decomposition by Method')
     ax.legend(fontsize=8)
@@ -70,17 +85,17 @@ def fig1_cost_decomposition():
     ax = axes[1]
     servers = [summary[summary['method']==m]['average_active_servers'].values[0] for m in order]
     utils = [summary[summary['method']==m]['average_utilization'].values[0] for m in order]
-    colors = ['#607D8B', '#4CAF50', '#8BC34A', '#2196F3', '#9C27B0', '#E91E63']
+    colors = [C9[m] for m in order]
     ax2 = ax.twinx()
     bars = ax.bar(x, servers, 0.5, color=colors, alpha=0.7)
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9)
+    ax.set_xticklabels(labels, fontsize=7)
     ax.set_ylabel('Avg Active Servers', color='#333')
     ax2.plot(x, utils, 'ko-', linewidth=2, markersize=8)
     ax2.set_ylabel('Avg Utilization', color='#333')
     for i, (s, u) in enumerate(zip(servers, utils)):
-        ax.text(i, s + 1, f'{s:.1f}', ha='center', fontsize=8)
-        ax2.annotate(f'{u:.3f}', (i, u), textcoords="offset points", xytext=(0, 12), ha='center', fontsize=8)
+        ax.text(i, s + 1, f'{s:.1f}', ha='center', fontsize=7)
+        ax2.annotate(f'{u:.3f}', (i, u), textcoords="offset points", xytext=(0, 12), ha='center', fontsize=7)
     ax.set_title('(b) Server Count & Utilization')
 
     plt.tight_layout()
@@ -94,10 +109,11 @@ def fig1_cost_decomposition():
 # =========================================================================
 def fig2_sla_breakdown():
     summary = pd.read_csv("outputs/experiment_summary.csv")
-    order = ['fixed', 'queue_greedy', 'price_aware_greedy', 'dqn', 'aci_dqn', 'dtaci_dqn']
-    labels = ['Fixed', 'Queue-Greedy', 'Price-Greedy', 'DQN', 'ACI-DQN', 'DtACI-DQN']
+    order = ORDER9
+    labels = ['Fixed', 'Queue-Greedy', 'Price-Greedy', 'Forecast-Greedy',
+              'Conformal-Greedy', 'DQN', 'Forecast-DQN', 'Static-C-DQN', 'ACI-DQN']
 
-    colors_sla = ['#607D8B', '#4CAF50', '#8BC34A', '#2196F3', '#9C27B0', '#E91E63']
+    colors_sla = [C9[m] for m in order]
     fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
     priorities = ['P1', 'P2', 'P3']
 
@@ -131,27 +147,28 @@ def fig2_sla_breakdown():
 # Figure 3: Action distribution and dynamics
 # =========================================================================
 def fig3_action_dynamics():
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 4.5))
 
     # 3a: Daily server variation boxplot
     ax = axes[0]
-    order = ['fixed', 'queue_greedy', 'price_aware_greedy', 'dqn', 'aci_dqn', 'dtaci_dqn']
-    labels = ['Fixed', 'Queue-\nGreedy', 'Price-\nGreedy', 'DQN', 'ACI-\nDQN', 'DtACI-\nDQN']
+    order = ORDER9
+    labels = ['Fixed', 'Queue-\nGreedy', 'Price-\nGreedy', 'Forecast-\nGreedy',
+              'Conf.\nGreedy', 'DQN', 'Forecast-\nDQN', 'Static-C.\nDQN', 'ACI-\nDQN']
     box_data = [daily_df[daily_df['method']==m]['average_active_servers'].values for m in order]
     bp = ax.boxplot(box_data, labels=labels, patch_artist=True)
-    colors_box = ['#607D8B', '#4CAF50', '#8BC34A', '#2196F3', '#9C27B0', '#E91E63']
+    colors_box = [C9[m] for m in order]
     for patch, c in zip(bp['boxes'], colors_box):
         patch.set_facecolor(c)
         patch.set_alpha(0.6)
     ax.set_ylabel('Avg Active Servers')
     ax.set_title('(a) Server Count Distribution across 267 Days')
-    ax.tick_params(axis='x', labelsize=8)
+    ax.tick_params(axis='x', labelsize=7)
 
     # 3b: Training reward curves
     ax = axes[1]
-    rl_methods = ['dqn', 'aci_dqn', 'dtaci_dqn']
-    rl_labels = ['DQN', 'ACI-DQN', 'DtACI-DQN']
-    rl_colors = ['#2196F3', '#9C27B0', '#E91E63']
+    rl_methods = ['dqn', 'forecast_dqn', 'static_conformal_dqn', 'aci_dqn']
+    rl_labels = ['DQN', 'Forecast-DQN', 'Static-C-DQN', 'ACI-DQN']
+    rl_colors = [C9[m] for m in rl_methods]
     for m, label, c in zip(rl_methods, rl_labels, rl_colors):
         try:
             hist = pd.read_csv(f'outputs/{m}_training_history.csv')
@@ -189,7 +206,7 @@ def fig3_action_dynamics():
 # Figure 4: Conformal prediction diagnostics
 # =========================================================================
 def fig4_conformal_diagnostics():
-    """Run per-slot analysis on a sample day for ACI and DtACI coverage."""
+    """Run per-slot analysis on a sample day for ACI coverage diagnostics."""
     try:
         agent_aci = DQNAgent(
             state_dim=env.observation_dim + 2 * cfg['qos']['K'],
@@ -204,94 +221,49 @@ def fig4_conformal_diagnostics():
         )
         agent_aci.load('outputs/models/aci_dqn.pt')
         agent_aci.epsilon = 0.0
-
-        agent_dtaci = DQNAgent(
-            state_dim=env.observation_dim + 2 * cfg['qos']['K'],
-            action_dim=env.action_dim,
-            hidden=cfg['rl']['hidden_sizes'], lr=cfg['rl']['lr'],
-            batch_size=cfg['rl']['batch_size'], replay_size=cfg['rl']['replay_size'],
-            epsilon_start=1.0, epsilon_end=0.02, epsilon_decay=0.995,
-            target_update_interval=cfg['rl']['target_update_interval'],
-            learning_starts=cfg['rl']['learning_starts'],
-            reward_scale=cfg['rl']['reward_scale'],
-            max_grad_norm=cfg['rl']['max_grad_norm'],
-        )
-        agent_dtaci.load('outputs/models/dtaci_dqn.pt')
-        agent_dtaci.epsilon = 0.0
     except Exception:
         print("  [SKIP] fig4: models not found, run experiment first")
         return
 
     aug_aci = ConformalAugmenter(cfg, learner='aci', use_shield=False)
     aug_aci.reset(env, 1064)
-    aug_dtaci = ConformalAugmenter(cfg, learner='dtaci', use_shield=True)
-    aug_dtaci.reset(env, 1064)
 
     # Collect per-slot conformal intervals for a sample day
     test_day = 1200
     env_aci = DataCenterEnv(cfg=cfg, day_load_matrix=env.day_load_matrix,
                             day_norm_matrix=env.day_norm_matrix, base_seed=2024)
-    env_dtaci = DataCenterEnv(cfg=cfg, day_load_matrix=env.day_load_matrix,
-                              day_norm_matrix=env.day_norm_matrix, base_seed=2024)
 
     state_aci, _ = env_aci.reset(test_day)
-    state_dtaci, _ = env_dtaci.reset(test_day)
 
     slots_data = []
     for slot in range(96):
-        # ACI
         s_aug = aug_aci.augment(state_aci, env_aci)
         lo, hi = aug_aci.cp.intervals_h_steps()
         a_raw = agent_aci.select_action(s_aug, greedy=True)
         a_n = action_to_n(a_raw, cfg)
         a_safe = aug_aci.shield(a_n, s_aug, env_aci)
-        ns_aci, r, d, info_aci = env_aci.step(a_safe)
+        a_safe_idx = n_to_action(a_safe, cfg)
+        ns_aci, r, d, info_aci = env_aci.step(a_safe_idx)
         actual_p3 = info_aci['arrivals'][2]
         aug_aci.on_step(env_aci, info_aci, a_raw, a_safe)
-
-        # DtACI
-        s_aug2 = aug_dtaci.augment(state_dtaci, env_dtaci)
-        lo2, hi2 = aug_dtaci.cp.intervals_h_steps()
-        a_raw2 = agent_dtaci.select_action(s_aug2, greedy=True)
-        a_n2 = action_to_n(a_raw2, cfg)
-        a_safe2 = aug_dtaci.shield(a_n2, s_aug2, env_dtaci)
-        ns_dt, r2, d2, info_dt = env_dtaci.step(a_safe2)
-        actual_p32 = info_dt['arrivals'][2]
-        aug_dtaci.on_step(env_dtaci, info_dt, a_raw2, a_safe2)
 
         slots_data.append({
             'slot': slot,
             'actual_p3': actual_p3,
             'aci_hi_p3': hi[2, 0],
             'aci_lo_p3': lo[2, 0],
-            'dtaci_hi_p3': hi2[2, 0],
-            'dtaci_lo_p3': lo2[2, 0],
         })
         state_aci = ns_aci
-        state_dtaci = ns_dt
         if d: break
 
     df_s = pd.DataFrame(slots_data)
 
-    fig, axes = plt.subplots(2, 1, figsize=(14, 8))
-
-    # Top: ACI
-    ax = axes[0]
+    fig, ax = plt.subplots(figsize=(14, 5))
     ax.fill_between(df_s['slot'], df_s['aci_lo_p3'], df_s['aci_hi_p3'],
                     alpha=0.3, color='#9C27B0', label='ACI interval')
     ax.plot(df_s['slot'], df_s['actual_p3'], 'o-', color='#333', markersize=3, label='Actual P3 arrivals')
     aci_covered = ((df_s['actual_p3'] >= df_s['aci_lo_p3']) & (df_s['actual_p3'] <= df_s['aci_hi_p3'])).mean()
-    ax.set_title(f'(a) ACI Conformal Intervals (coverage={aci_covered:.2%})')
-    ax.set_ylabel('P3 Arrivals per Slot')
-    ax.legend(fontsize=8)
-
-    # Bottom: DtACI
-    ax = axes[1]
-    ax.fill_between(df_s['slot'], df_s['dtaci_lo_p3'], df_s['dtaci_hi_p3'],
-                    alpha=0.3, color='#E91E63', label='DtACI interval')
-    ax.plot(df_s['slot'], df_s['actual_p3'], 'o-', color='#333', markersize=3, label='Actual P3 arrivals')
-    dtaci_covered = ((df_s['actual_p3'] >= df_s['dtaci_lo_p3']) & (df_s['actual_p3'] <= df_s['dtaci_hi_p3'])).mean()
-    ax.set_title(f'(b) DtACI Conformal Intervals (coverage={dtaci_covered:.2%})')
+    ax.set_title(f'ACI Conformal Intervals — P3 (coverage={aci_covered:.2%})')
     ax.set_xlabel('Slot (15-min interval)')
     ax.set_ylabel('P3 Arrivals per Slot')
     ax.legend(fontsize=8)
@@ -299,7 +271,7 @@ def fig4_conformal_diagnostics():
     plt.tight_layout()
     fig.savefig(FIG_DIR / "fig4_conformal_diagnostics.png", dpi=200, bbox_inches='tight')
     plt.close()
-    print(f"  [OK] fig4_conformal_diagnostics.png (ACI cov={aci_covered:.2%}, DtACI cov={dtaci_covered:.2%})")
+    print(f"  [OK] fig4_conformal_diagnostics.png (ACI cov={aci_covered:.2%})")
 
 
 # =========================================================================
@@ -336,7 +308,8 @@ def fig5_dqn_sensitivity():
             a_raw = agent_dqn.select_action(state, greedy=True)
             a_n = action_to_n(a_raw, cfg)
             a_safe = aug.shield(a_n, state, env_test)
-            next_state, r, d, info = env_test.step(a_safe)
+            a_safe_idx = n_to_action(a_safe, cfg)
+            next_state, r, d, info = env_test.step(a_safe_idx)
 
             # Extract state components (de-normalize)
             q_len = info['queue_len']
@@ -495,12 +468,13 @@ def generate_stress_test():
         # Override reset to inject stress workload and price
         state, _ = env_s.reset(0)
         env_s.workload = fresh_workload()
-        object.__setattr__(env_s, 'price_curve', base_price)
+        env_s.set_price_curve(base_price)
         policy.reset()
 
         for slot in range(T):
             n = policy.act(state, env_s)
-            next_state, r, d, info = env_s.step(n)
+            a_idx = n_to_action(n, cfg)
+            next_state, r, d, info = env_s.step(a_idx)
             state = next_state
             if d:
                 break
@@ -525,8 +499,9 @@ def generate_stress_test():
     try:
         rl_configs = [
             ('dqn', 0),
+            ('forecast_dqn', cfg['qos']['K']),
+            ('static_conformal_dqn', 2 * cfg['qos']['K']),
             ('aci_dqn', 2 * cfg['qos']['K']),
-            ('dtaci_dqn', 2 * cfg['qos']['K']),
         ]
         for mkey, extra_dim in rl_configs:
             agent = DQNAgent(
@@ -546,13 +521,18 @@ def generate_stress_test():
             env_s = make_stress_env()
             state, _ = env_s.reset(0)
             env_s.workload = fresh_workload()
-            object.__setattr__(env_s, 'price_curve', base_price)
+            env_s.set_price_curve(base_price)
 
             if mkey == 'dqn':
                 aug = IdentityAugmenter()
+            elif mkey == 'forecast_dqn':
+                from src.rl.augmenters import ForecastAugmenter
+                aug = ForecastAugmenter(cfg)
+            elif mkey == 'static_conformal_dqn':
+                from src.rl.augmenters import StaticConformalAugmenter
+                aug = StaticConformalAugmenter(cfg)
             else:
-                aug = ConformalAugmenter(cfg, learner='aci' if mkey == 'aci_dqn' else 'dtaci',
-                                          use_shield=(mkey == 'dtaci_dqn'))
+                aug = ConformalAugmenter(cfg, learner='aci', use_shield=False)
 
             aug.reset(env_s, 0)
             for slot in range(T):
@@ -593,10 +573,11 @@ def generate_stress_test():
     print(f"  Stress test results -> {stress_path}")
 
     # Stress test figure
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    order = ['fixed', 'queue_greedy', 'price_aware_greedy', 'dqn', 'aci_dqn', 'dtaci_dqn']
-    colors_stress = ['#607D8B', '#4CAF50', '#8BC34A', '#2196F3', '#9C27B0', '#E91E63']
-    labels_stress = ['Fixed', 'Queue-\nGreedy', 'Price-\nGreedy', 'DQN', 'ACI-\nDQN', 'DtACI-\nDQN']
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    order = ORDER9
+    colors_stress = [C9[m] for m in order]
+    labels_stress = ['Fixed', 'Queue-\nGreedy', 'Price-\nGreedy', 'Forecast-\nGreedy',
+                     'Conf.\nGreedy', 'DQN', 'Forecast-\nDQN', 'Static-C.\nDQN', 'ACI-\nDQN']
 
     # Cost
     ax = axes[0]

@@ -19,6 +19,7 @@ def tiny_cfg() -> dict:
             "figures_dir": "outputs/figures",
             "logs_dir": "outputs/logs",
             "outputs_dir": "outputs",
+            "models_dir": "outputs/models",
         },
         "time": {"slots_per_day": 96, "dt_hour": 0.25},
         "server": {"Nmin": 8, "Nmax": 120, "cap_per_server": 1.0,
@@ -35,11 +36,25 @@ def tiny_cfg() -> dict:
                   "high_hours":   [10, 11, 14, 15, 19, 20],
                   "middle_hours": [8, 9, 12, 13, 16, 17, 18, 21]},
         "workload": {
+            "source": "synthetic",
             "p1": {"a": 1.0, "b": 6.0, "c": 2.0},
             "p2": {"a": 2.0, "b": 4.0, "c": 2.0},
             "p3": {"a": 0.5, "b": 3.5, "c": 2.0},
             "business_hours": [9, 18], "evening_hours": [18, 23],
             "night_hours": [0, 6], "seed_offset": 0,
+        },
+        "workload_enhancement": {
+            "day_multiplier": {"mu": 0.0, "sigma": 0.0},
+            "autocorr_noise": {"rho": 0.0, "sigma": 0.0},
+            "clustered_burst": {
+                "enabled": False, "priorities": [3],
+                "p_start": 0.03, "p_continue": 0.85,
+                "multiplier_min": 3.0, "multiplier_max": 10.0,
+            },
+            "priority_mix_shift": {
+                "enabled": False, "mode": "redistribute",
+                "p1_share_factor": 1.0, "incident_hours": [10, 16],
+            },
         },
         "split": {"train_ratio": 0.6, "cal_ratio": 0.2, "test_ratio": 0.2},
         "conformal": {
@@ -57,8 +72,15 @@ def tiny_cfg() -> dict:
                "train_episodes": 2, "eval_episodes": 2,
                "epsilon_start": 1.0, "epsilon_end": 0.05,
                "epsilon_decay": 0.99, "target_update_interval": 50,
-               "warmup_steps": 50, "hidden_sizes": [32, 32],
-               "reward_scale": 0.01, "max_grad_norm": 5.0},
+               "learning_starts": 50, "hidden_sizes": [32, 32],
+               "reward_scale": 0.01, "max_grad_norm": 5.0,
+               "reward_weights": {"elec": 1.0, "qos": 5.0, "switch": 0.2},
+               "reward_scales": {"elec": 10.0, "qos": 10.0, "switch": 5.0}},
+        "experiment": {
+            "training_seeds": [2024],
+            "scenario_seeds": [100],
+        },
+        "diagnostics": {"rolling_miscoverage_window": 24},
         "seed": 7,
         "verbose": False,
     }

@@ -166,11 +166,12 @@ def run_heuristic(env, policy, workload, price_curve):
     """Run one heuristic episode and return stats dict."""
     env.reset(0)
     env.workload = workload
-    object.__setattr__(env, 'price_curve', price_curve)
+    env.set_price_curve(price_curve)
     policy.reset()
     while not env.done:
         action = policy.act(env.get_state(), env)
-        env.step(action)
+        a_idx = n_to_action(action, cfg)
+        env.step(a_idx)
     return _collect_stats(env)
 
 
@@ -178,7 +179,7 @@ def run_rl(env, agent, aug, workload, price_curve):
     """Run one RL episode and return stats dict."""
     state, _ = env.reset(0)
     env.workload = workload
-    object.__setattr__(env, 'price_curve', price_curve)
+    env.set_price_curve(price_curve)
     aug.reset(env, 0)
     while not env.done:
         s_aug = aug.augment(state, env)
@@ -253,22 +254,6 @@ def load_agents():
     aci.epsilon = 0.0
     agents['aci_dqn'] = aci
     augmenters['aci_dqn'] = ConformalAugmenter(cfg, learner='aci', use_shield=False)
-
-    # DtACI-DQN
-    dtaci = DQNAgent(
-        state_dim=17 + 2 * K, action_dim=cfg['rl']['action_bins'],
-        hidden=cfg['rl']['hidden_sizes'], lr=cfg['rl']['lr'],
-        batch_size=cfg['rl']['batch_size'], replay_size=cfg['rl']['replay_size'],
-        epsilon_start=1.0, epsilon_end=0.02, epsilon_decay=0.995,
-        target_update_interval=cfg['rl']['target_update_interval'],
-        learning_starts=cfg['rl']['learning_starts'],
-        reward_scale=cfg['rl']['reward_scale'],
-        max_grad_norm=cfg['rl']['max_grad_norm'],
-    )
-    dtaci.load('outputs/models/dtaci_dqn.pt')
-    dtaci.epsilon = 0.0
-    agents['dtaci_dqn'] = dtaci
-    augmenters['dtaci_dqn'] = ConformalAugmenter(cfg, learner='dtaci', use_shield=True)
 
     return agents, augmenters
 
@@ -434,7 +419,7 @@ def evaluate_scenario(scenario_fn, agents, augmenters):
               f"P3_viol={stats['P3_violations']}, P3_comp={stats['P3_completed']}/{stats['total_P3']}")
 
     # --- RL methods ---
-    for mkey in ['dqn', 'aci_dqn', 'dtaci_dqn']:
+    for mkey in ['dqn', 'aci_dqn']:
         wl = fresh_workload(wl_template)
         env_copy = make_env()
         agent = agents[mkey]
@@ -442,8 +427,7 @@ def evaluate_scenario(scenario_fn, agents, augmenters):
         # For conformal methods, re-warm calibrator per fresh augmenter
         if mkey != 'dqn':
             aug = ConformalAugmenter(
-                cfg, learner='aci' if mkey == 'aci_dqn' else 'dtaci',
-                use_shield=(mkey == 'dtaci_dqn'))
+                cfg, learner='aci', use_shield=False)
         stats = run_rl(env_copy, agent, aug, wl, price_curve)
         stats['method'] = mkey
         stats['scenario'] = label
@@ -477,9 +461,9 @@ if __name__ == "__main__":
     print("SUMMARY: Cost Comparison (CNY)")
     print("="*70)
     methods = ['fixed', 'queue_greedy', 'price_aware_greedy',
-               'dqn', 'aci_dqn', 'dtaci_dqn']
+               'dqn', 'aci_dqn']
     labels  = ['Fixed', 'Queue-Greedy', 'Price-Greedy',
-               'DQN', 'ACI-DQN', 'DtACI-DQN']
+               'DQN', 'ACI-DQN']
 
     for scenario in full_df['scenario'].unique():
         sdf = full_df[full_df['scenario'] == scenario]
@@ -512,16 +496,15 @@ if __name__ == "__main__":
             bar = '█' * int(viol_rate / 2) if viol_rate > 0 else '·'
             print(f"  {lbl:20s} {viol_rate:6.2f}% {bar}")
 
-    # ---- Identify where ACI/DtACI add value ----
+    # ---- Identify where ACI adds value ----
     print("\n" + "="*70)
-    print("ANALYSIS: Where Do Conformal Methods Add Value?")
+    print("ANALYSIS: Where Does ACI-DQN Add Value?")
     print("="*70)
     for scenario in full_df['scenario'].unique():
         sdf = full_df[full_df['scenario'] == scenario]
         print(f"\n  {scenario}:")
         dqn_row = sdf[sdf['method'] == 'dqn']
         aci_row = sdf[sdf['method'] == 'aci_dqn']
-        dtaci_row = sdf[sdf['method'] == 'dtaci_dqn']
         greedy_row = sdf[sdf['method'] == 'queue_greedy']
 
         if len(greedy_row) > 0:
@@ -535,12 +518,6 @@ if __name__ == "__main__":
             print(f"  DQN    -> ACI-DQN:          cost {d['total_cost']:.0f} -> {a['total_cost']:.0f} "
                   f"({(a['total_cost']-d['total_cost'])/d['total_cost']*100:+.1f}%), "
                   f"P3_viol {int(d['P3_violations'])} -> {int(a['P3_violations'])}")
-        if len(aci_row) > 0 and len(dtaci_row) > 0:
-            a = aci_row.iloc[0]
-            dt = dtaci_row.iloc[0]
-            print(f"  ACI-DQN -> DtACI-DQN:       cost {a['total_cost']:.0f} -> {dt['total_cost']:.0f} "
-                  f"({(dt['total_cost']-a['total_cost'])/a['total_cost']*100:+.1f}%), "
-                  f"P3_viol {int(a['P3_violations'])} -> {int(dt['P3_violations'])}")
 
     print(f"\nFull results -> {OUT_DIR / 'stress_scenario_results.csv'}")
     print("Done.")

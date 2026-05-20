@@ -63,3 +63,12 @@ class PriceAwareGreedyPolicy:
                             env.n_prev + self.ramp))
         n_raw = int(np.clip(n_raw, self.Nmin, self.Nmax))
         return n_to_action(n_raw, self.cfg)
+
+    def on_step(self, env, info) -> None:
+        pass
+
+    def metrics(self):
+        return {}
+
+    def warm_up_from_calibration(self, y_hat_cal, y_cal) -> None:
+        pass

@@ -1,0 +1,21 @@
+# E2 Distribution Shift
+# Train/cal: base distribution (no enhancement).
+# Test: mean shift + priority mix shift (redistribute P1 share).
+# ACI must adapt online — static conformal intervals will be stale.
+
+scenario: {id: E2, name: "Distribution Shift"}
+server: {Nmax: 75, ramp_limit: 15}
+power: {switch_cost: 0.30}
+
+phases:
+  train: {}
+  calibration: {}
+  test:
+    workload_enhancement:
+      day_multiplier: {mu: 0.2, sigma: 0.1}
+      autocorr_noise: {rho: 0.5, sigma: 0.10}
+      priority_mix_shift:
+        enabled: true
+        mode: redistribute
+        p1_share_factor: 2.0
+        incident_hours: [10, 16]

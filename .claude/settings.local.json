@@ -36,7 +36,9 @@
       "Bash(git gc *)",
       "Bash(git add *)",
       "Bash(python -m pytest tests/ -x -q)",
-      "Bash(python -m pytest tests/test_shield.py -v)"
+      "Bash(python -m pytest tests/test_shield.py -v)",
+      "Bash(python -m pytest tests/test_env.py -v)",
+      "Bash(python -c \"from src.scenarios import build_scenario_config, get_phase_config, list_available_scenarios; print\\('Scenarios:', list_available_scenarios\\(\\)\\); print\\('E1 load OK'\\)\")"
     ],
     "additionalDirectories": [
       "d:\\Users\\ZhuanZ1\\Downloads"

@@ -1,14 +1,17 @@
 """
 experiments/_heuristic_runner.py
 --------------------------------
-Runs a heuristic policy (Fixed / QueueGreedy / PriceAware) for a given
-list of day indices. Mirrors ``rollout_episode`` from ``train_dqn.py``
-but without the DQNAgent.
+Runs a heuristic policy (Fixed / QueueGreedy / PriceAware / ForecastGreedy /
+ConformalGreedy) for a given list of day indices.
+
+Policies follow the unified protocol:
+    reset() / act(state, env) / on_step(env, info) / metrics()
+    warm_up_from_calibration(y_hat, y_cal)  [optional, no-op for simple policies]
 """
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
@@ -19,7 +22,7 @@ from src.rl.train_dqn import EpisodeStats
 def run_heuristic(env: DataCenterEnv,
                   policy,
                   day_indices: List[int],
-                  rng: np.random.Generator) -> List[EpisodeStats]:
+                  rng: Optional[np.random.Generator] = None) -> List[EpisodeStats]:
     out: List[EpisodeStats] = []
     for d in day_indices:
         # Use deterministic seed (base_seed + day_index) so all methods
@@ -28,7 +31,9 @@ def run_heuristic(env: DataCenterEnv,
         policy.reset()
         while not env.done:
             action = policy.act(state, env)
-            state, _, _, _ = env.step(action)
+            next_state, _, _, info = env.step(action)
+            policy.on_step(env, info)
+            state = next_state
         h = env.history_as_arrays()
         out.append(EpisodeStats(
             day_index=int(d),

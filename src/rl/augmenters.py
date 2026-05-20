@@ -25,6 +25,7 @@ import numpy as np
 from ..conformal.aci import ACI
 from ..conformal.dtaci import DtACI
 from ..conformal.forecaster import build_forecaster
+from ..conformal.split_conformal import SplitConformal
 from ..datacenter_env import DataCenterEnv, action_to_n, n_to_action
 from ..safe_layer.dtaci_action_shield import DtACIActionShield
 
@@ -114,6 +115,137 @@ class PerPriorityConformalForecaster:
     def metrics(self) -> Dict:
         return {f"P{k+1}": self.learners[k].metrics()
                 for k in range(self.K)}
+
+
+# ---------------------------------------------------------------------------
+# ForecastAugmenter — point-forecast features only, no conformal
+# ---------------------------------------------------------------------------
+
+class ForecastAugmenter:
+    """Adds rolling-mean point-forecast features to the state.
+
+    Same base forecaster as ConformalAugmenter. No conformal intervals,
+    no shield. State dim: 17 + K = 20.
+    """
+
+    name = "forecast"
+
+    def __init__(self, cfg: Dict):
+        self.cfg = cfg
+        self.K = int(cfg["qos"]["K"])
+        self.H = int(cfg["conformal"]["horizon"])
+        kind = cfg["conformal"]["forecaster"]
+        window = int(cfg["conformal"]["rolling_window"])
+        self.forecasters = [
+            build_forecaster(kind, window=window, horizon=self.H)
+            for _ in range(self.K)
+        ]
+        self.history: List[np.ndarray] = []
+        self._lambda_scale = float(cfg["conformal"].get("lambda_scale", 20.0))
+
+    def reset(self, env: DataCenterEnv, day_index: int) -> None:
+        self.history = []
+
+    def augment(self, state: np.ndarray, env: DataCenterEnv) -> np.ndarray:
+        # K-dim: per-priority mean forecast over H steps, normalised
+        fc = np.zeros(self.K, dtype=np.float64)
+        for k in range(self.K):
+            hist_k = np.array([h[k] for h in self.history], dtype=np.float64)
+            vals = []
+            for h in range(1, self.H + 1):
+                y_hat = self.forecasters[k].predict(hist_k, h=h)
+                vals.append(float(y_hat) if np.ndim(y_hat) == 0 else float(y_hat[0]))
+            fc[k] = float(np.mean(vals)) if vals else 0.0
+        extra = fc / max(0.01, self._lambda_scale)
+        return np.concatenate([state, extra]).astype(np.float32)
+
+    def shield(self, n_servers: int, state, env: DataCenterEnv) -> int:
+        return int(n_servers)
+
+    def on_step(self, env: DataCenterEnv, info: dict,
+                action_pre: int, action_post: int) -> None:
+        arrivals = np.asarray(info["arrivals"], dtype=np.float64)
+        self.history.append(arrivals)
+
+    def metrics(self) -> Dict:
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# StaticConformalAugmenter — fixed split-conformal intervals, no online update
+# ---------------------------------------------------------------------------
+
+class StaticConformalAugmenter:
+    """Adds FIXED split-conformal interval features to the state.
+
+    Same base forecaster as ConformalAugmenter. Intervals are fit *once*
+    on calibration data and never updated online. No shield.
+
+    State dim: 17 + 2K = 23 (same shape as ACI-DQN, static intervals).
+
+    Feature order: ``[upper_1, upper_2, upper_3, lower_1, lower_2, lower_3]``
+    — matches ``ConformalAugmenter`` convention.
+    """
+
+    name = "static_conformal"
+
+    def __init__(self, cfg: Dict):
+        self.cfg = cfg
+        self.K = int(cfg["qos"]["K"])
+        self.H = int(cfg["conformal"]["horizon"])
+        kind = cfg["conformal"]["forecaster"]
+        window = int(cfg["conformal"]["rolling_window"])
+        self.forecasters = [
+            build_forecaster(kind, window=window, horizon=self.H)
+            for _ in range(self.K)
+        ]
+        self.conformal = [
+            SplitConformal(alpha=float(cfg["conformal"]["alpha"]))
+            for _ in range(self.K)
+        ]
+        self.history: List[np.ndarray] = []
+        self._fitted = False
+        self._lambda_scale = float(cfg["conformal"].get("lambda_scale", 20.0))
+
+    def warm_up_from_calibration(self,
+                                 y_hat_cal: np.ndarray,
+                                 y_cal: np.ndarray) -> None:
+        """Fit SplitConformal ONCE on calibration data. Never updated online."""
+        for k in range(self.K):
+            self.conformal[k].fit(y_hat_cal[:, k], y_cal[:, k])
+        self._fitted = True
+
+    def reset(self, env: DataCenterEnv, day_index: int) -> None:
+        self.history = []
+
+    def augment(self, state: np.ndarray, env: DataCenterEnv) -> np.ndarray:
+        # 2K-dim: [upper_1..upper_K, lower_1..lower_K]
+        lo = np.zeros(self.K, dtype=np.float64)
+        hi = np.zeros(self.K, dtype=np.float64)
+        for k in range(self.K):
+            hist_k = np.array([h[k] for h in self.history], dtype=np.float64)
+            y_hat = self.forecasters[k].predict(hist_k, h=1)
+            y_hat_f = float(y_hat) if np.ndim(y_hat) == 0 else float(y_hat[0])
+            l, u = self.conformal[k].interval(y_hat_f)
+            lo[k] = max(0.0, float(l)) if np.ndim(l) == 0 else max(0.0, float(l[0]))
+            hi[k] = max(0.0, float(u)) if np.ndim(u) == 0 else max(0.0, float(u[0]))
+        extra = np.concatenate([
+            hi / max(0.01, self._lambda_scale),
+            lo / max(0.01, self._lambda_scale),
+        ]).astype(np.float32)
+        return np.concatenate([state, extra]).astype(np.float32)
+
+    def shield(self, n_servers: int, state, env: DataCenterEnv) -> int:
+        return int(n_servers)
+
+    def on_step(self, env: DataCenterEnv, info: dict,
+                action_pre: int, action_post: int) -> None:
+        arrivals = np.asarray(info["arrivals"], dtype=np.float64)
+        self.history.append(arrivals)
+        # NO online conformal update — intervals stay fixed after calibration
+
+    def metrics(self) -> Dict:
+        return {}
 
 
 # ---------------------------------------------------------------------------

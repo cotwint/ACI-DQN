@@ -77,11 +77,27 @@ def calibration_arrival_data(cfg: Dict,
     Used to warm-up the conformal learners. We sample fresh Poisson
     realisations using cfg seed offset; deterministic across runs.
 
+    ONLY works for synthetic workloads. Trace mode must use real trace
+    arrivals — there is no silent fallback.
+
     Returns
     -------
     y_hat_cal : (N, K) "predicted" arrival counts (rolling-mean style)
     y_cal     : (N, K) realised Poisson draws
+
+    Raises
+    ------
+    NotImplementedError
+        If ``workload.source`` is ``"trace"``.
     """
+    wl_source = cfg.get("workload", {}).get("source", "synthetic")
+    if wl_source == "trace":
+        raise NotImplementedError(
+            "Trace calibration must use real trace arrivals, not synthetic "
+            "Poisson draws. Load real trace calibration data via "
+            "load_trace_workloads() before enabling trace mode."
+        )
+
     K = cfg["qos"]["K"]
     T = cfg["time"]["slots_per_day"]
     window = cfg["conformal"]["rolling_window"]

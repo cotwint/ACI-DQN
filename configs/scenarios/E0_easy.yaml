@@ -1,0 +1,15 @@
+# E0 Easy — sanity check only
+# Keep original easy benchmark: high capacity, no noise, no burst.
+
+scenario: {id: E0, name: "Easy"}
+server: {Nmax: 120, ramp_limit: 25}
+power: {switch_cost: 0.10}
+
+workload_enhancement:
+  day_multiplier: {mu: 0.0, sigma: 0.0}
+  autocorr_noise: {rho: 0.0, sigma: 0.0}
+
+phases:
+  train: {}
+  calibration: {}
+  test: {}

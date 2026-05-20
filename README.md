@@ -1,70 +1,91 @@
-# ACI-DQN：自适应共形推理增强的深度强化学习数据中心调度
+# ACI-DQN: Adaptive Conformal Inference for Deep RL Datacenter Scheduling
 
-> 在高压力、分布偏移和突发不确定性场景下，利用**自适应共形推理 (ACI)** 增强 DQN 状态空间，实现数据中心服务器的鲁棒动态调度。
-
----
-
-## 核心问题
-
-数据中心面临 **异构任务混合**（紧急 P1、交互 P2、批处理 P3）与 **分时电价波动** 的双重挑战。调度器需在每个 15 分钟时隙决定开启多少台服务器——太少则任务超时（SLA 违约罚款），太多则电费飙升。
-
-**关键难点**：任务到达模式在训练和部署之间存在**分布偏移**。训练期的泊松到达率参数在季节性高峰、突发负载等场景下不再成立。传统 DQN 在偏移后要么保守堆服务器，要么频繁违约。
-
-**本文提出 ACI-DQN**：将自适应共形推理的在线不确定性量化能力注入 DQN 状态空间，使智能体在分布偏移下仍能做出精准调度决策。
+> Under high-pressure, distribution-shift, and burst-uncertainty scenarios, **ACI-DQN** uses **Adaptive Conformal Inference (ACI)** to augment the DQN state space, enabling robust dynamic server scheduling.
 
 ---
 
-## 方法概述
+## Core Problem
 
-### 对比方法
+Datacenters face the dual challenge of **heterogeneous task mixing** (urgent P1, interactive P2, batch P3) and **time-of-use electricity pricing**. The scheduler must decide how many servers to keep active every 15 minutes — too few means SLA violations (costly), too many means wasted electricity.
 
-| 类型               | 方法               | 说明                                                              |
-| ------------------ | ------------------ | ----------------------------------------------------------------- |
-| 启发式             | Fixed              | 固定服务器数（64 台），无自适应能力                               |
-| 启发式             | Queue-Greedy       | 按当前队列积压计算所需服务器，无视电价                            |
-| 启发式             | Price-Aware Greedy | 高价时段降低 P3 调度优先级                                        |
-| 强化学习           | DQN                | 标准 DQN（3 层 MLP），17 维状态                                   |
-| **强化学习** | **ACI-DQN**  | **本文提出**：ACI 共形区间增强状态（23 维）                 |
-| 强化学习           | DtACI-DQN          | 扩展：DtACI 元学习 + 安全动作盾（区间过宽导致过度保护，成本偏高） |
+**Key difficulty**: Task arrival patterns exhibit **distribution shift** between training and deployment. Poisson arrival parameters that held during training break under seasonal peaks, bursty loads, and capacity cliffs. A standard DQN either over-provisions servers or racks up violations.
 
-### ACI-DQN 核心机制
+**This project proposes ACI-DQN**: infusing online uncertainty quantification from adaptive conformal inference into the DQN state space, allowing the agent to make precise scheduling decisions under distribution shift.
+
+---
+
+## Method Lineup
+
+### 9 Main Methods
+
+| Type       | Method                 | State Dim | Description                                              |
+| ---------- | ---------------------- | --------- | -------------------------------------------------------- |
+| Heuristic  | Fixed                  | —         | Constant server count, no adaptation                     |
+| Heuristic  | Queue-Greedy           | —         | Serve current backlog, ignore price                      |
+| Heuristic  | Price-Aware Greedy     | —         | Defer P3 when electricity is expensive                   |
+| Heuristic  | Forecast-Greedy        | —         | Rolling-mean point forecast + greedy capacity planning   |
+| Heuristic  | Conformal-Greedy       | —         | ACI interval forecast + greedy capacity planning         |
+| RL         | DQN                    | 17        | Standard DQN, no uncertainty features                    |
+| RL         | Forecast-DQN           | 20        | DQN + K point-forecast features (rolling mean)           |
+| RL         | Static-Conformal-DQN   | 23        | DQN + 2K fixed split-conformal interval features         |
+| **RL**     | **ACI-DQN**            | **23**    | **Proposed**: DQN + 2K ACI online-adaptive interval features |
+
+### Appendix
+
+| Method              | Description                                     |
+| ------------------- | ----------------------------------------------- |
+| Shielded DtACI-DQN  | DtACI meta-learning + safety action shield      |
+
+---
+
+## ACI-DQN Core Mechanism
 
 ```
-每个决策步 t：
+Each decision step t:
 ┌───────────────────────────────────────────────┐
-│  1. 滚动均值预测器: ŷ_k ← mean(历史到达_k)      │
-│  2. ACI 在线更新: [L_k, U_k] ← 自适应区间       │
-│     算法: α_{t+1} = α_t + η·(α_target - 𝟙{covered})
-│     效果: 到达模式偏移 → 区间自动扩宽            │
-│  3. 状态拼接: s' = [s_原始(17) ‖ Ū/λ ‖ L̄/λ]   │
-│  4. Q 网络推理: a = argmax Q(s', ·)             │
-│  5. 环境执行: n = action_to_n(a)                │
+│  1. Rolling-mean forecaster: ŷ_k ← mean(past arrivals_k)  │
+│  2. ACI online update: [L_k, U_k] ← adaptive interval     │
+│     Algorithm: α_{t+1} = α_t + η·(α_target - 𝟙{covered})  │
+│     Effect: arrival pattern shift → interval auto-widens   │
+│  3. State concatenation: s' = [s_raw(17) ‖ Ū/λ ‖ L̄/λ]    │
+│  4. Q-network inference: a = argmax Q(s', ·)               │
+│  5. Env execution: n = action_to_n(a)                      │
 └───────────────────────────────────────────────┘
 ```
 
-**与 DQN 的关键区别**：DQN 只看到"现在队列有多长"；ACI-DQN 额外看到"未来到达的预测区间有多宽"——区间宽意味着不确定性高，网络可据此主动增配资源；区间窄意味着可预测，网络可放心压低服务器数以节约电费。
+**Key difference from DQN**: DQN only sees "how long is the queue now"; ACI-DQN additionally sees "how wide is the prediction interval for future arrivals" — wide intervals signal high uncertainty, prompting the network to allocate more resources proactively; narrow intervals signal predictability, allowing the network to scale down and save electricity.
 
-共形预测将"未来到达量的不确定性区间"作为额外特征输入 Q 网络，使决策能区分可预测状态与高风险状态。
-
-### DtACI-DQN（扩展方法）
-
-在 ACI-DQN 基础上增加：(1) 元学习动态选择最优 η；(2) 安全动作盾利用共形上界强制保障 P1/P2 SLA。本文以 ACI-DQN 为主，DtACI-DQN 作为安全关键场景的扩展讨论。
+All conformal methods (Conformal-Greedy, Static-Conformal-DQN, ACI-DQN) share the same rolling-mean base forecaster. The only difference is how intervals are constructed: static split-conformal (one-time calibration) vs. ACI (online adaptive).
 
 ---
 
-## 实验设置
+## Experimental Setup
 
-### 数据与划分
+### Scenario Framework (E0–E4)
 
-基于真实区域电力负荷曲线驱动合成任务生成，时间顺序划分：
+Experiments use a **config-isolated scenario overlay** system. Base `config.yaml` holds system defaults (Nmax=120, ramp_limit=25, switch_cost=0.10). Each scenario YAML in `configs/scenarios/` overlays capacity constraints and workload enhancements without mutating the base config.
 
-| 集合   | 天数 | 用途                               |
-| ------ | ---- | ---------------------------------- |
-| 训练集 | 798  | 训练 DQN / ACI-DQN / DtACI-DQN     |
-| 校准集 | 266  | 校准 ACI/DtACI 共形预测器          |
-| 测试集 | 267  | 最终评估（所有方法相同确定性轨迹） |
+| Scenario | Name                 | Nmax | Ramp | Switch | Key Challenge                        |
+| -------- | -------------------- | ---- | ---- | ------ | ------------------------------------ |
+| E0       | Easy                 | 120  | 25   | 0.10   | Sanity check, ample capacity         |
+| E1       | Normal-Hard          | 75   | 15   | 0.30   | Main benchmark, tighter capacity     |
+| E2       | Distribution Shift   | 75   | 15   | 0.30   | Train/cal normal, test shifted       |
+| E3       | Bursty Uncertainty   | 75   | 15   | 0.30   | Baseline noise + P3 bursts at test   |
+| E4       | Capacity Cliff       | 45   | 10   | 0.40   | Severe capacity pressure             |
 
-### 任务模型
+Each scenario defines **phase-specific overrides** (`phases.train`, `phases.calibration`, `phases.test`) — train and calibration phases can use different distributions from test.
+
+### Data & Splits
+
+Based on real regional power load curves driving synthetic task generation, split chronologically:
+
+| Set          | Days  | Purpose                               |
+| ------------ | ----- | ------------------------------------- |
+| Train        | 60%   | Train DQN / Forecast-DQN / Static-C-DQN / ACI-DQN |
+| Calibration  | 20%   | Warm up conformal forecasters         |
+| Test         | 20%   | Final evaluation (same deterministic trace per day) |
+
+### Task Model
 
 ```
 λ_P1(t) = 1.0 + 6.0·x(t) + 2.0·evening(t)
@@ -73,192 +94,136 @@
 N_k(t) ~ Poisson(λ_k(t)),  work ~ Normal(μ_k, σ_k)
 ```
 
-| 优先级 | 截止时间        | 平均工作量 | 违约罚金    |
-| ------ | --------------- | ---------- | ----------- |
-| P1     | 2 slots (30min) | 0.60       | 50.0 CNY/次 |
-| P2     | 8 slots (2h)    | 1.20       | 20.0 CNY/次 |
-| P3     | 32 slots (8h)   | 4.00       | 5.0 CNY/次  |
+| Priority | Deadline        | Mean Work | SLA Penalty   |
+| -------- | --------------- | --------- | ------------- |
+| P1       | 2 slots (30min) | 0.60      | 50.0 CNY/viol |
+| P2       | 8 slots (2h)    | 1.20      | 20.0 CNY/viol |
+| P3       | 32 slots (8h)   | 4.00      | 5.0 CNY/viol  |
 
-### 奖励函数
+### Workload Enhancements
+
+Configurable via `workload_enhancement` in scenario YAML:
+
+- **day_multiplier**: LogNormal(μ, σ) daily scalar on all arrival rates
+- **autocorr_noise**: AR(1) process `z_t = ρ·z_{t-1} + ε_t` for temporal correlation
+- **clustered_burst**: Markov-chain burst state machine on P3 arrivals
+- **priority_mix_shift**: `redistribute` (shift P1 share up from P2+P3) or `amplify` (scale P1 up, total load increases)
+
+All randomness uses a **deterministic RNG hierarchy** derived from a unified seed via `np.random.default_rng()` chain — zero global `np.random` calls.
+
+### Reward Function
 
 ```
 cost_t = elec_cost + qos_cost + switch_cost
-elec_cost  = E_t · π_t           (能耗 × 分时电价)
-qos_cost   = Σ_k β_k · v_kt      (违约数 × 罚金)
-switch_cost = φ · |n_t - n_{t-1}| (开关成本)
+elec_cost  = E_t · π_t           (energy × time-of-use price)
+qos_cost   = Σ_k β_k·v_kt + ρ_k·overdue_kt
+switch_cost = φ · |n_t - n_{t-1}| (ramping cost)
 
 reward_t = -(w_e·elec/scale_e + w_q·qos/scale_q + w_s·switch/scale_s)
 w = {1.0, 5.0, 0.2},  scale = {10.0, 10.0, 5.0}
 ```
 
-### 关键参数
+### Key Parameters
 
-| 参数          | 值             | 说明                       |
-| ------------- | -------------- | -------------------------- |
-| 服务器范围    | [8, 120]       | ramp_limit=25              |
-| 动作离散化    | 21 bins        | 均匀映射 [8, 120]          |
-| Q 网络结构    | [128, 128]     | 两层 MLP, ReLU             |
-| 训练 episodes | 500            | ε: 1.0→0.05, decay=0.995 |
-| ACI α_target | 0.10           | 目标误覆盖率               |
-| ACI η        | 0.05           | 区间宽度自适应学习率       |
-| 共形前瞻 H    | 4              | 预测/保护 4 步（1 小时）   |
-| 电价          | 0.32/0.55/0.95 | 低谷/平段/高峰 (CNY/kWh)   |
-
----
-
-## 评估场景
-
-标准测试集任务高度可预测（泊松过程，确定性 λ(t)），所有方法均无 SLA 违约，无法区分优劣。为此构造三个压力场景：
-
-### S1: 季节性峰值偏移（分布偏移）
-
-模拟用电旺季：所有优先级到达率提升 50%~200%，负载昼夜模式整体上移。**共形预测器在校准集习得的残差分布不再匹配**——最典型的分布偏移场景。
-
-### S2: 突发异常（高随机性）⭐ 核心场景
-
-正常基础到达率下，**20% 时隙注入 5-15x P3 突发到达**，突发任务截止时间压缩至 1-4 slot（原 10%）。工作量的方差增大（对数正态替代正态）。**任何点预测器都无法预知突发**——最典型的不可预测性场景。
-
-### S3: 极端叠加（容量极限验证）
-
-S1+S2 叠加 + 5x 电价尖峰。5029 个任务/天，所有方法撞到 Nmax=120 服务器上限，验证容量约束边界。
+| Parameter       | Value             | Description                       |
+| --------------- | ----------------- | --------------------------------- |
+| Server range    | [8, Nmax]         | scenario-dependent Nmax           |
+| Action bins     | 21                | uniform mapping [Nmin, Nmax]      |
+| Q-network       | [128, 128]        | 2-layer MLP, ReLU                 |
+| Training eps    | 500               | ε: 1.0→0.05, decay=0.995          |
+| ACI α_target    | 0.10              | target miscoverage rate           |
+| ACI η           | 0.05              | interval width adaptation rate    |
+| Conformal H     | 4                 | forecast/protect 4 steps (1 hour) |
+| Multi-seed      | 3 train × 10 scen | mean±std, 95% CI via t-dist       |
 
 ---
 
-## 实验结果
+## Results Output
 
-### 标准测试集 267 天
+After running experiments, the following CSV files are produced:
 
-| 方法              | 成本  | 服务器 | 利用率 | 违约 |
-| ----------------- | ----- | ------ | ------ | ---- |
-| Queue-Greedy      | 327.7 | 17.7   | 99.6%  | 0    |
-| Price-Greedy      | 329.4 | 17.7   | 99.6%  | 0    |
-| Fixed             | 415.0 | 63.6   | 28.1%  | 0    |
-| DQN               | 429.0 | 68.9   | 27.2%  | 0    |
-| **ACI-DQN** | 427.0 | 68.1   | 27.8%  | 0    |
-| DtACI-DQN         | 586.3 | 109.2  | 17.1%  | 0    |
-
-> 可预测负载下贪心接近最优，所有方法零违约。**这正是构造 S1/S2 的原因——标准测试集无法区分方法优劣。**
->
-> 对于大部分任务调度场景，其更像是S1与S2场景的叠加，因为算力是紧缺的，不会像这种理想场景服务器可以完全覆盖算力需求
->
-> 深度学习方法普遍偏差，是因为QoS 权重 `w_q=5.0`，电费权重 `w_e=1.0`导致奖励函数倾斜严重，模型倾向于多开服务器而不是贪心地利用现有服务器的保守策略
-
-### S1: 季节性峰值偏移（分布偏移）
-
-| 方法              | 成本            | 服务器         | 利用率 | P3 违约     |
-| ----------------- | --------------- | -------------- | ------ | ----------- |
-| Queue-Greedy      | 592.2           | 39.3           | 100%   | 0           |
-| Price-Greedy      | 587.5           | 39.6           | 99.3%  | 0           |
-| DQN               | 604.2           | 66.3           | 63.9%  | 0           |
-| **ACI-DQN** | **579.2** | **57.8** | 71.4%  | **0** |
-| DtACI-DQN         | 780.5           | 117.9          | 34.7%  | 0           |
-
-**分析**（图3a-d）：分布偏移后，共形预测器（校准于旧分布）的预测区间自动扩宽。ACI-DQN 的 Q 网络感知到"预测不再可靠"，将服务器配置在 58 台——既不像 DQN 那样保守堆到 66 台（电费浪费），也不像贪心那样激进压到 39 台（100% 利用率无缓冲，图3c红色警告）。ACI-DQN 以最低成本 579.2 完成调度，比 DQN 低 4.1%。
-
-### S2: 突发异常 ⭐
-
-| 方法              | 成本            | 服务器         | 利用率 | **P3 违约** |
-| ----------------- | --------------- | -------------- | ------ | ----------------- |
-| Queue-Greedy      | 758.6           | 43.8           | 91.6%  | **14 次**   |
-| Price-Greedy      | 758.6           | 43.8           | 91.6%  | **14 次**   |
-| DQN               | 668.3           | 63.5           | 68.0%  | **13 次**   |
-| **ACI-DQN** | **660.5** | **70.3** | 55.0%  | **0 次**    |
-| DtACI-DQN         | 735.2           | 96.3           | 42.2%  | 0 次              |
-
-**这是本文最核心的实验发现**（图3e-h）：
-
-- **贪心策略完全失效**（14 次违约）：因其仅基于当前队列决策，无预测能力
-- **DQN 同样违约**（13 次）：因其状态不含不确定性信息，无法区分"正常波动"和"突发前兆"
-- **ACI-DQN 是唯一同时实现最低成本和零违约的 RL 方法**（图3h：独占帕累托最优角）
-
-ACI 的共形区间在突发 slot 到来前就开始扩宽（滚动窗口捕捉到上升趋势），Q 网络提前将服务器从 64 增配到 70，用可控的额外电费（+5.4%）换取了 SLA 的绝对保障。相比之下，DtACI-DQN 虽然也零违约，但 shield 将服务器强制推至 96 台（成本高出 11%），属过度保护。
-
-### S3: 极端叠加
-
-所有方法撞到 Nmax=120 容量上限，约 40-50% 违约率。此场景反映的是物理容量硬约束，非调度策略可解决。
-
-### 论文图表（outputs/figures/）
-
-| 图表           | 内容                                             | 核心信息                                           |
-| -------------- | ------------------------------------------------ | -------------------------------------------------- |
-| fig1           | 标准测试集下各方法成本分解 + 服务器数/利用率对比 | 可预测场景下方法无差异，贪心即最优                 |
-| fig2           | RL 训练奖励曲线 + TD Loss 曲线                   | 三种 RL 方法均稳定收敛                             |
-| **fig3** | **S1+S2 八面板深度对比**                   | **核心结果：ACI-DQN 在两类压力场景下均最优** |
-| fig4           | ACI vs DtACI 共形区间覆盖诊断                    | 展示共形区间如何随到达波动自适应扩缩               |
-| fig5           | 服务器数分布箱线图 + RL 动作选择行为             | 揭示 DQN 保守坍塌与 ACI-DQN 动作多样性             |
-
-**fig3 详细面板（2行×4列）**：
-
-| 面板   | S1（分布偏移）                                               | S2（突发异常）                                                                 |
-| ------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| 成本   | (a) ACI-DQN 579.2 最低，DQN 604.2, 贪心 ~592                 | (e) ACI-DQN 660.5 最低（零违约方法中唯一 < 700）                               |
-| 服务器 | (b) ACI-DQN 57.8 居中，DQN 66.3 保守, 贪心 ~39 激进          | (g) ACI-DQN 70.3 适度扩容，DtACI 96.3 过度保护                                 |
-| 利用率 | (c) 颜色编码：贪心 100% (红色警告), ACI-DQN 71.4% (绿色健康) | —                                                                             |
-| 差异化 | (d) 成本结构分解（电费/违约/开关）                           | (f) P3 违约：ACI-DQN (**PASS 0次**) vs 贪心/DQN (**FAIL 13-14次**) |
-| 权衡   | —                                                           | (h) 成本-违约散点图：ACI-DQN 独占帕累托最优角                                  |
+| File                       | Content                                            |
+| -------------------------- | -------------------------------------------------- |
+| `daily_results.csv`        | Per-day, per-method, per-seed metrics              |
+| `experiment_summary.csv`   | Mean ± std ± 95% CI across seeds                   |
+| `paired_tests.csv`         | Paired t-tests vs reference methods                |
+| `aci_diagnostics.csv`      | Per-slot ACI coverage, alpha, interval width       |
 
 ---
 
-## 分析与讨论
-
-### ACI 为什么有效
-
-1. **不确定性的信息价值**：共形区间将"预测有多可靠"编码为 Q 网络输入。分布偏移时区间扩宽 → 网络感知风险 → 增配资源；平稳时区间收窄 → 网络放心节约。
-2. **在线自适应的优势**：ACI 每步更新 η，无需重新训练 Q 网络。校准集 warm-up 仅提供初始残差，在线阶段完全自适应。
-3. **最小侵入性**：ACI-DQN 仅增加 6 维状态特征，不改变奖励函数、网络结构或训练算法。可即插即用于任何 DQN 调度系统。
-
-### 与贪心策略的关系
-
-在可预测场景下（标准测试集），贪心策略表现优异——符合直觉。ACI-DQN 的价值不在可预测场景，而在 **预测失败时** 提供鲁棒性。这一特性在真实数据中心（负载尖峰、季节性偏移、突发流量）中至关重要。
-
-### 后续工作
-
-1. **真实集群 trace 验证**：当前使用泊松合成负载。替换为 Alibaba Cluster Trace 等真实数据后，其长程依赖和突发模式将更充分体现 ACI 的在线适应价值。
-2. **多数据中心扩展**：将单中心调度推广至多中心联合优化（负载迁移 + 电价套利）。
-3. **DtACI Shield 调谐**：优化 `upper_bound_clip` 和区间归一化参数，降低 shield 的过度保护程度。
-
----
-
-## 项目结构
+## Project Structure
 
 ```
-├── config.yaml                    # 所有实验参数
-├── README.md                      # 本文件
-├── main.py                        # 主实验入口
-├── generate_figures.py            # 论文图表生成（5 张图）
-├── stress_test_scenarios.py       # S1/S2/S3 压力测试
+├── config.yaml                     # All system-default parameters
+├── configs/scenarios/              # E0-E4 scenario YAML overlays
+│   ├── E0_easy.yaml
+│   ├── E1_normal_hard.yaml
+│   ├── E2_distribution_shift.yaml
+│   ├── E3_bursty_uncertainty.yaml
+│   └── E4_capacity_cliff.yaml
+├── README.md
+├── PROJECT_ARCHITECTURE.txt        # Detailed architecture reference
+├── main.py                         # Main experiment runner
+├── generate_figures.py             # Publication-quality figures
+├── analysis_plots.py               # Additional analysis plots
+├── stress_test_scenarios.py        # S1/S2/S3 stress tests
+├── _common.py                      # Shared: env builder, calibration
+├── _heuristic_runner.py            # Shared heuristic evaluation loop
 │
 ├── src/
-│   ├── datacenter_env.py          # 数据中心 Gym-like 环境
-│   ├── workload_generator.py      # 合成任务生成器
+│   ├── datacenter_env.py           # DataCenterEnv (Gym-like API)
+│   ├── workload_generator.py       # Synthetic task generation + enhancements
+│   ├── scenarios.py                # Scenario config loader & builder
+│   ├── price_model.py              # TOU electricity price model
+│   ├── data_preprocess.py          # Load/clean/split raw CSV data
+│   ├── trace_loader.py             # Real-trace interface (Alibaba PAI)
 │   ├── rl/
-│   │   ├── dqn_agent.py           # DQN 智能体
-│   │   ├── train_dqn.py           # 训练/评估循环
-│   │   └── augmenters.py          # ACI/DtACI 共形增强器
+│   │   ├── dqn_agent.py            # QNetwork, ReplayBuffer, DQNAgent
+│   │   ├── train_dqn.py            # Training/eval loops, EpisodeStats
+│   │   └── augmenters.py           # Identity, Forecast, StaticConformal,
+│   │                               #   Conformal augmenters
 │   ├── conformal/
-│   │   ├── aci.py                 # 自适应共形推理
-│   │   └── dtaci.py               # 动态调谐 ACI
+│   │   ├── aci.py                  # Adaptive Conformal Inference learner
+│   │   ├── dtaci.py                # DtACI ensemble (appendix)
+│   │   ├── forecaster.py           # RollingMean, Persistence, etc.
+│   │   └── split_conformal.py      # Static split-conformal (baseline)
 │   ├── safe_layer/
-│   │   └── dtaci_action_shield.py # DtACI 安全动作盾
-│   ├── baselines/                 # 启发式基线策略
+│   │   └── dtaci_action_shield.py  # Safety action shield (appendix)
+│   ├── baselines/
+│   │   ├── fixed_policy.py
+│   │   ├── queue_greedy_policy.py
+│   │   ├── price_aware_greedy_policy.py
+│   │   ├── forecast_greedy_policy.py
+│   │   └── conformal_greedy_policy.py
 │   └── evaluation/
-│       └── metrics.py             # 评估指标汇总
+│       ├── metrics.py              # Aggregation, CI, paired tests
+│       └── plot.py                 # Matplotlib helpers
 │
-└── outputs/
-    ├── models/                    # 训练好的模型 (.pt)
-    ├── figures/                   # 图表输出 (.png)
-    ├── stress_test/               # 压力测试结果
-    ├── experiment_summary.csv     # 实验汇总表
-    └── daily_results.csv          # 每日结果明细
+└── tests/
+    ├── _fixtures.py                # Tiny config for unit tests
+    ├── test_env.py                  # Env invariants + strict action API
+    ├── test_dtaci.py                # DtACI interval validity
+    └── test_shield.py               # Shield invariants
 ```
 
-## 运行
+## Running
 
 ```bash
 pip install -r requirements.txt
 
-python main.py --all                # 全量实验（训练+评估）
-python generate_figures.py          # 生成 5 张论文图表
-python stress_test_scenarios.py     # S1/S2/S3 压力测试
-python -m pytest tests/ -v          # 单元测试
+# Main experiment (all 9 methods, multi-seed)
+python main.py --scenario E1 --all
+
+# Single method, quick smoke test
+python main.py --scenario E1 --method aci_dqn --train-episodes 2 --test-days 5
+
+# Figures
+python generate_figures.py
+python analysis_plots.py
+
+# Stress tests
+python stress_test_scenarios.py
+
+# Unit tests
+python -m pytest tests/ -v
 ```

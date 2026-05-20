@@ -1,0 +1,15 @@
+# E4 Capacity Cliff — boundary analysis only
+# Very tight capacity. All methods approach the limit.
+# Not a main contribution scenario.
+
+scenario: {id: E4, name: "Capacity Cliff"}
+server: {Nmax: 45, ramp_limit: 10}
+power: {switch_cost: 0.40}
+
+workload_enhancement:
+  day_multiplier: {mu: 0.0, sigma: 0.2}
+
+phases:
+  train: {}
+  calibration: {}
+  test: {}

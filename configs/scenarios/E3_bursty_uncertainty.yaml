@@ -1,0 +1,25 @@
+# E3 Bursty-Uncertainty
+# Train/cal: day_multiplier + autocorr only (no burst).
+# Test: adds clustered P3 burst with Markov persistence.
+# ACI must widen intervals after observing initial burst slots.
+
+scenario: {id: E3, name: "Bursty-Uncertainty"}
+server: {Nmax: 75, ramp_limit: 15}
+power: {switch_cost: 0.30}
+
+workload_enhancement:
+  day_multiplier: {mu: 0.0, sigma: 0.3}
+  autocorr_noise: {rho: 0.7, sigma: 0.15}
+
+phases:
+  train: {}
+  calibration: {}
+  test:
+    workload_enhancement:
+      clustered_burst:
+        enabled: true
+        priorities: [3]
+        p_start: 0.03
+        p_continue: 0.85
+        multiplier_min: 3.0
+        multiplier_max: 10.0

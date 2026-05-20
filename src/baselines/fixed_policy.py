@@ -25,3 +25,12 @@ class FixedPolicy:
 
     def reset(self):
         pass
+
+    def on_step(self, env, info) -> None:
+        pass
+
+    def metrics(self):
+        return {}
+
+    def warm_up_from_calibration(self, y_hat_cal, y_cal) -> None:
+        pass

@@ -65,6 +65,23 @@ workload:
   night_hours:    [0, 6]
   seed_offset: 0
 
+# ----- Workload enhancement (overridden per scenario) --------
+workload_enhancement:
+  day_multiplier: {mu: 0.0, sigma: 0.0}       # LogNormal daily demand multiplier
+  autocorr_noise: {rho: 0.0, sigma: 0.0}       # AR(1) multiplicative slot noise
+  clustered_burst:
+    enabled: false
+    priorities: [3]                             # which priorities burst (1-based)
+    p_start: 0.03                               # P(normal -> burst) per slot
+    p_continue: 0.85                            # P(burst -> burst) per slot
+    multiplier_min: 3.0
+    multiplier_max: 10.0
+  priority_mix_shift:
+    enabled: false
+    mode: redistribute                          # "redistribute" or "amplify"
+    p1_share_factor: 1.0                        # multiplier on P1 share during incident
+    incident_hours: [10, 16]
+
 # ----- Data split --------------------------------------------
 split:
   train_ratio: 0.60
@@ -119,6 +136,15 @@ rl:
 
 # ----- Random seed -------------------------------------------
 seed: 2024
+
+# ----- Experiment multi-seed --------------------------------
+experiment:
+  training_seeds: [2024, 2025, 2026]
+  scenario_seeds: [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]
+
+# ----- ACI diagnostics ---------------------------------------
+diagnostics:
+  rolling_miscoverage_window: 24
 
 # ----- Verbose flag for logging -----------------------------
 verbose: true

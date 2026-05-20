@@ -1,0 +1,16 @@
+# E1 Normal-Hard — main experiment scenario
+# Tighter capacity + day-level multiplier + autocorrelated noise.
+# All phases (train/cal/test) share the same distribution.
+
+scenario: {id: E1, name: "Normal-Hard"}
+server: {Nmax: 75, ramp_limit: 15}
+power: {switch_cost: 0.30}
+
+workload_enhancement:
+  day_multiplier: {mu: 0.0, sigma: 0.3}
+  autocorr_noise: {rho: 0.7, sigma: 0.15}
+
+phases:
+  train: {}
+  calibration: {}
+  test: {}

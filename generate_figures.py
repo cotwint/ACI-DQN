@@ -34,15 +34,21 @@ plt.rcParams.update({
 FIG_DIR = Path("outputs/figures")
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-# Color palette
+# Color palette — 9 main methods
 C = {
     'fixed': '#607D8B', 'queue_greedy': '#4CAF50',
-    'price_aware_greedy': '#8BC34A', 'dqn': '#2196F3',
-    'aci_dqn': '#9C27B0', 'dtaci_dqn': '#E91E63',
+    'price_aware_greedy': '#8BC34A', 'forecast_greedy': '#00BCD4',
+    'conformal_greedy': '#FF5722', 'dqn': '#2196F3',
+    'forecast_dqn': '#3F51B5', 'static_conformal_dqn': '#795548',
+    'aci_dqn': '#9C27B0',
 }
-ORDER = ['fixed', 'queue_greedy', 'price_aware_greedy', 'dqn', 'aci_dqn', 'dtaci_dqn']
-LABELS = ['Fixed', 'Queue-\nGreedy', 'Price-\nGreedy', 'DQN', 'ACI-DQN', 'DtACI-DQN']
-LABELS_SHORT = ['Fixed', 'Queue-Greedy', 'Price-Greedy', 'DQN', 'ACI-DQN', 'DtACI-DQN']
+ORDER = ['fixed', 'queue_greedy', 'price_aware_greedy',
+         'forecast_greedy', 'conformal_greedy',
+         'dqn', 'forecast_dqn', 'static_conformal_dqn', 'aci_dqn']
+LABELS = ['Fixed', 'Queue-\nGreedy', 'Price-\nGreedy', 'Forecast-\nGreedy',
+          'Conf.\nGreedy', 'DQN', 'Forecast-\nDQN', 'Static-C.\nDQN', 'ACI-DQN']
+LABELS_SHORT = ['Fixed', 'Queue-Greedy', 'Price-Greedy', 'Forecast-Greedy',
+                'Conf-Greedy', 'DQN', 'Forecast-DQN', 'Static-C-DQN', 'ACI-DQN']
 
 summary = pd.read_csv("outputs/experiment_summary.csv")
 daily = pd.read_csv("outputs/daily_results.csv")
@@ -51,7 +57,7 @@ daily = pd.read_csv("outputs/daily_results.csv")
 # Figure 1: Cost Decomposition + Server/Util Efficiency
 # ==============================================================================
 def fig1_cost_efficiency():
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5.2))
+    fig, axes = plt.subplots(1, 2, figsize=(18, 5.5))
 
     # (a) Cost decomposition
     ax = axes[0]
@@ -105,8 +111,8 @@ def fig1_cost_efficiency():
 # ==============================================================================
 def fig2_training_dynamics():
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
-    rl_methods = ['dqn', 'aci_dqn', 'dtaci_dqn']
-    rl_labels = ['DQN', 'ACI-DQN', 'DtACI-DQN']
+    rl_methods = ['dqn', 'forecast_dqn', 'static_conformal_dqn', 'aci_dqn']
+    rl_labels = ['DQN', 'Forecast-DQN', 'Static-C-DQN', 'ACI-DQN']
     rl_colors = [C[m] for m in rl_methods]
     window = 25
 
@@ -333,7 +339,7 @@ def fig3_stress_test():
 # Figure 4: Conformal Prediction Diagnostics
 # ==============================================================================
 def fig4_conformal():
-    """Conformal coverage + ACI alpha adaptation from S2 scenario."""
+    """Conformal coverage + ACI alpha adaptation diagnostics."""
     from src.utils import load_config
     from src.data_preprocess import day_matrix, normalised_day_matrix
     from src.datacenter_env import DataCenterEnv, action_to_n
@@ -351,8 +357,8 @@ def fig4_conformal():
     raw, _ = day_matrix(processed, T)
     norm, _ = normalised_day_matrix(processed, T)
 
-    # Recreate S2 scenario
-    def s2_arrival_rates(t, k):
+    # Recreate a bursty scenario for diagnostics
+    def arrival_rates(t, k):
         if k == 0: return 3.0
         elif k == 1: return 4.0
         else: return 2.0
@@ -363,7 +369,7 @@ def fig4_conformal():
 
     for t in range(T):
         for k in range(K):
-            lam = s2_arrival_rates(t, k)
+            lam = arrival_rates(t, k)
             if k == 2 and rng.random() < 0.20:
                 lam *= rng.uniform(5, 15)
             n = rng.poisson(max(0.0, lam))
@@ -376,65 +382,40 @@ def fig4_conformal():
     wl = DayWorkload(lam=np.zeros((K,T)), n_arrivals=np.zeros((K,T), dtype=int),
                      arrival_work=np.zeros((K,T)), tasks_per_slot=tasks_per_slot)
 
-    # Run ACI and DtACI on this scenario, collecting per-slot intervals
+    # Run ACI on this scenario, collecting per-slot intervals
     env_aci = DataCenterEnv(cfg=cfg, day_load_matrix=raw, day_norm_matrix=norm, base_seed=2024)
     aug_aci = ConformalAugmenter(cfg, learner='aci', use_shield=False)
     env_aci.reset(0)
     env_aci.workload = wl
 
-    env_dt = DataCenterEnv(cfg=cfg, day_load_matrix=raw, day_norm_matrix=norm, base_seed=2024)
-    aug_dt = ConformalAugmenter(cfg, learner='dtaci', use_shield=False)
-    env_dt.reset(0)
-    env_dt.workload = wl
-
-    aci_data = []; dt_data = []
+    aci_data = []
     for slot in range(T):
-        # ACI
         s_aci = aug_aci.augment(env_aci.get_state(), env_aci)
         lo_a, hi_a = aug_aci.cp.intervals_h_steps()
         actual_a = sum(1 for _ in env_aci.workload.tasks_per_slot[2][slot]) if slot < T else 0
-        env_aci.step(0)  # dummy step
+        env_aci.step(0)  # dummy step at action 0
         aci_data.append({
             'slot': slot, 'actual': actual_a,
             'lo': lo_a[2, 0], 'hi': hi_a[2, 0],
             'covered': lo_a[2, 0] <= actual_a <= hi_a[2, 0],
         })
 
-        # DtACI
-        s_dt = aug_dt.augment(env_dt.get_state(), env_dt)
-        lo_d, hi_d = aug_dt.cp.intervals_h_steps()
-        actual_d = sum(1 for _ in env_dt.workload.tasks_per_slot[2][slot]) if slot < T else 0
-        env_dt.step(0)
-        dt_data.append({
-            'slot': slot, 'actual': actual_d,
-            'lo': lo_d[2, 0], 'hi': hi_d[2, 0],
-            'covered': lo_d[2, 0] <= actual_d <= hi_d[2, 0],
-        })
+    df = pd.DataFrame(aci_data)
 
-    aci_df = pd.DataFrame(aci_data)
-    dt_df = pd.DataFrame(dt_data)
+    fig, ax = plt.subplots(figsize=(14, 5))
+    ax.fill_between(df['slot'], df['lo'], df['hi'], alpha=0.25, color='#9C27B0', label='ACI interval')
+    ax.plot(df['slot'], df['actual'], 'o-', color='#333', markersize=3, linewidth=1, label='Actual P3 arrivals')
+    uncovered = df[~df['covered']]
+    if len(uncovered) > 0:
+        ax.scatter(uncovered['slot'], uncovered['actual'], color='red', s=40, zorder=5,
+                   marker='x', linewidth=1.5, label=f'Uncovered ({len(uncovered)})')
+    cov = df['covered'].mean()
+    ax.set_title(f'ACI Conformal Intervals — P3 (coverage={cov:.1%})', fontsize=12, fontweight='bold')
+    ax.set_ylabel('P3 Arrivals per Slot', fontsize=10)
+    ax.legend(fontsize=8, loc='upper right')
+    ax.set_xlim(0, T - 1)
+    ax.set_xlabel('Time Slot (15-min interval)', fontsize=11)
 
-    fig, axes = plt.subplots(2, 1, figsize=(14, 8))
-
-    for idx, (df, name, color, ax) in enumerate([
-        (aci_df, 'ACI', '#9C27B0', axes[0]),
-        (dt_df, 'DtACI', '#E91E63', axes[1]),
-    ]):
-        ax.fill_between(df['slot'], df['lo'], df['hi'], alpha=0.25, color=color, label=f'{name} interval')
-        ax.plot(df['slot'], df['actual'], 'o-', color='#333', markersize=3, linewidth=1, label='Actual P3 arrivals')
-        # Mark uncovered points
-        uncovered = df[~df['covered']]
-        if len(uncovered) > 0:
-            ax.scatter(uncovered['slot'], uncovered['actual'], color='red', s=40, zorder=5,
-                       marker='x', linewidth=1.5, label=f'Uncovered ({len(uncovered)})')
-        cov = df['covered'].mean()
-        ax.set_title(f'({chr(97+idx)}) {name}: P3 Conformal Intervals (coverage={cov:.1%})',
-                     fontsize=12, fontweight='bold')
-        ax.set_ylabel('P3 Arrivals per Slot', fontsize=10)
-        ax.legend(fontsize=8, loc='upper right')
-        ax.set_xlim(0, T - 1)
-
-    axes[1].set_xlabel('Time Slot (15-min interval)', fontsize=11)
     plt.tight_layout()
     fig.savefig(FIG_DIR / "fig4_conformal_diagnostics.png")
     plt.close()
@@ -479,11 +460,11 @@ def fig5_action_policy():
 
     # 5c: Action distribution from debug data
     ax3 = fig.add_subplot(2, 3, (4, 6))
-    action_methods = ['dqn', 'aci_dqn', 'dtaci_dqn']
-    action_labels = ['DQN', 'ACI-DQN', 'DtACI-DQN']
+    action_methods = ['dqn', 'forecast_dqn', 'static_conformal_dqn', 'aci_dqn']
+    action_labels = ['DQN', 'Forecast-DQN', 'Static-C-DQN', 'ACI-DQN']
     action_colors = [C[m] for m in action_methods]
-    width = 0.25
-    x = np.arange(3)
+    width = 0.2
+    x = np.arange(len(action_methods))
     for i, (m, label, color) in enumerate(zip(action_methods, action_labels, action_colors)):
         try:
             ad = pd.read_csv(f'outputs/action_debug_{m}.csv')
@@ -499,9 +480,9 @@ def fig5_action_policy():
     ax3.set_xticks(x)
     ax3.set_xticklabels(action_labels, fontsize=9)
     ax3.set_ylabel('Mean Raw Action Index (0-20)', fontsize=10)
-    ax3.set_title('(c) RL Action Selection (3 sample days)', fontsize=11, fontweight='bold')
+    ax3.set_title('(c) RL Action Selection (sample days)', fontsize=11, fontweight='bold')
     ax3.axhline(y=10, color='gray', linestyle='--', alpha=0.4, linewidth=1)
-    ax3.text(2.5, 10.2, 'midpoint', fontsize=7, color='gray', ha='right')
+    ax3.text(len(action_methods) - 0.5, 10.2, 'midpoint', fontsize=7, color='gray', ha='right')
     # Add server count mapping
     ax3_twin = ax3.twinx()
     Nmin, Nmax = 8, 120

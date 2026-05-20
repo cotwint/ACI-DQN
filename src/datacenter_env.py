@@ -28,7 +28,9 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from .price_model import build_daily_price
-from .workload_generator import DayWorkload, Task, generate_day
+from .workload_generator import (
+    DayWorkload, Task, generate_day, generate_day_enhanced,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -36,13 +38,14 @@ from .workload_generator import DayWorkload, Task, generate_day
 # ---------------------------------------------------------------------------
 
 def action_to_n(action: int, cfg: Dict) -> int:
-    """Map discrete action index to number of active servers."""
+    """Map discrete action index to number of active servers.
+
+    No silent clipping — caller must ensure *action* is in [0, bins-1].
+    """
     bins = cfg["rl"]["action_bins"]
     Nmin = cfg["server"]["Nmin"]
     Nmax = cfg["server"]["Nmax"]
-    a = int(np.clip(action, 0, bins - 1))
-    # Linear mapping; bins - 1 gives the full span.
-    n = Nmin + (Nmax - Nmin) * a / (bins - 1)
+    n = Nmin + (Nmax - Nmin) * action / (bins - 1)
     return int(round(n))
 
 
@@ -144,6 +147,7 @@ class DataCenterEnv:
         self.switch_scale = float(rs.get("switch", 5.0))
 
         self.price_curve = build_daily_price(cfg)
+        self._workload_params: Dict | None = None  # set via set_workload_params()
         # State: Q1,Q2,Q3, B1,B2,B3, near_deadline1,2,3, min_slack1,2,3,
         #        price, x, n_prev, sin, cos = 17 dims
         self.observation_dim = 3 + 3 + 3 + 3 + 1 + 1 + 1 + 2
@@ -158,6 +162,24 @@ class DataCenterEnv:
         self.n_prev: int = self.Nmin
         self.done: bool = False
         self.history: List[StepInfo] = []
+
+    # -----------------------------------------------------------------
+    # Public mutation API (only way to change config-derived fields)
+    # -----------------------------------------------------------------
+
+    def set_price_curve(self, curve: np.ndarray) -> None:
+        """Replace the daily price curve.  *curve* shape must be ``(T,)``."""
+        if curve.shape != (self.T,):
+            raise ValueError(f"price_curve shape {curve.shape}, expected ({self.T},)")
+        self.price_curve = curve.astype(np.float64).copy()
+
+    def set_workload_params(self, params: Dict) -> None:
+        """Store workload enhancement params used by ``reset()``.
+
+        When set, ``reset()`` calls ``generate_day_enhanced()`` instead of
+        the plain ``generate_day()``.
+        """
+        self._workload_params = params
 
     # -----------------------------------------------------------------
     # Public Gym-style API
@@ -186,7 +208,12 @@ class DataCenterEnv:
             self.workload = self._external_workloads[day_index]
         else:
             wseed = self.base_seed + day_index if seed is None else int(seed)
-            self.workload = generate_day(self.x_curve, self.cfg, wseed)
+            if self._workload_params:
+                self.workload = generate_day_enhanced(
+                    self.x_curve, self.cfg, wseed, self._workload_params,
+                )
+            else:
+                self.workload = generate_day(self.x_curve, self.cfg, wseed)
 
         self.queues = [[] for _ in range(self.K)]
         self.t = 0
@@ -197,11 +224,23 @@ class DataCenterEnv:
         return self.get_state(), {"day_index": day_index}
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, Dict]:
-        """Advance one 15-minute slot."""
+        """Advance one 15-minute slot.
+
+        *action* must be an action index in ``[0, action_bins-1]``.
+        Passing a server count (e.g. 68) will raise ``ValueError``.
+        """
         if self.done:
             raise RuntimeError("step() called after done. Call reset().")
         if self.workload is None or self.x_curve is None:
             raise RuntimeError("Env not reset().")
+
+        bins = self.action_dim
+        if not isinstance(action, (int, np.integer)) or action < 0 or action >= bins:
+            raise ValueError(
+                f"env.step() expects action index in [0, {bins - 1}], "
+                f"got {action}. Use n_to_action() to convert server count "
+                f"to action index before calling env.step()."
+            )
 
         t = self.t
         n_active = action_to_n(action, self.cfg)
