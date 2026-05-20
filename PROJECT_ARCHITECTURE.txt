@@ -1,0 +1,536 @@
+================================================================================
+ACIDQN Project — Complete Architecture & Implementation Reference
+================================================================================
+Generated: 2026-05-20
+Purpose:  Detailed code-logic reference for AI decision-making (human + LLM).
+          Covers every module, class, function signature, data flow, and
+          the mathematical rationale behind the implementation.
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+  Problem:  Datacenter server scheduling under heterogeneous tasks (P1/P2/P3)
+            and time-of-use electricity pricing. Every 15 minutes the scheduler
+            decides how many servers to keep active. Trade-off: too few ->
+            SLA violations (costly) ; too many -> wasted electricity.
+
+  Solution: DtACI-DQN — a DQN agent whose state is augmented with online
+            conformal prediction intervals (ACI / DtACI). The intervals tell
+            the Q-network "how uncertain the future is", enabling robust
+            decisions under distribution shift.
+
+  Six baselines compared:
+    1. Fixed            — constant server count (midpoint of [Nmin, Nmax])
+    2. Queue-Greedy     — serve current backlog, ignore price
+    3. Price-Aware Greedy — defer P3 when electricity is expensive
+    4. DQN              — standard DQN (17-dim state, no uncertainty info)
+    5. ACI-DQN          — DQN + ACI prediction intervals in state (PROPOSED)
+    6. DtACI-DQN        — DQN + DtACI intervals + safety action shield
+
+================================================================================
+2. FILE MAP (every source file, its role, and what imports it)
+================================================================================
+
+  ROOT
+  ├── config.yaml                  All hyperparameters. Loaded by utils.load_config()
+  ├── main.py                      CLI experiment runner. Entry point for all 6 methods.
+  ├── generate_figures.py          Publication-quality figure generator (5 figs).
+  ├── analysis_plots.py            Older figure + stress-test analysis script.
+  ├── stress_test_scenarios.py     S1/S2/S3 scenario builder and evaluator.
+  ├── train_cloud.ipynb            Cloud-training notebook (Colab/Kaggle).
+  ├── _common.py                   Shared: build_env_and_splits(), calibration_arrival_data()
+  ├── _heuristic_runner.py         Shared: run_heuristic() for 3 heuristic baselines
+  ├── _explore_trace.py            One-off Alibaba PAI trace exploration script
+  ├── README.md                    Project description and results
+  ├── requirements.txt             Python dependencies
+  ├── pyproject.toml               Project metadata
+  │
+  ├── src/
+  │   ├── utils.py                 load_config(), set_global_seed(), get_logger(), ensure_dir()
+  │   ├── datacenter_env.py        Core env: DataCenterEnv class (Gym-like API)
+  │   ├── price_model.py           build_daily_price() — TOU electricity price
+  │   ├── workload_generator.py    Synthetic task generation (Poisson + formulas)
+  │   ├── data_preprocess.py       Load raw CSV, clean, split into train/cal/test
+  │   ├── trace_loader.py          NEW: Real-trace interface (Alibaba PAI → DayWorkload)
+  │   │
+  │   ├── rl/
+  │   │   ├── dqn_agent.py         QNetwork, ReplayBuffer, DQNAgent
+  │   │   ├── train_dqn.py         rollout_episode(), train_agent(), evaluate()
+  │   │   │                        IdentityAugmenter (pass-through, for plain DQN)
+  │   │   └── augmenters.py        ConformalAugmenter (state + intervals + optional shield)
+  │   │                            PerPriorityConformalForecaster (K learners)
+  │   │
+  │   ├── conformal/
+  │   │   ├── aci.py               ACI: single online adaptive conformal learner
+  │   │   ├── dtaci.py             DtACI: ensemble of ACIs with exponential weighting
+  │   │   ├── forecaster.py        RollingMean, Persistence, SeasonalNaive, SklearnRidge
+  │   │   └── split_conformal.py   Vanilla static split-conformal (baseline, not used online)
+  │   │
+  │   ├── safe_layer/
+  │   │   └── dtaci_action_shield.py  Safety shield: uses conformal upper bounds to
+  │   │                                enforce minimum server count for P1+P2
+  │   │
+  │   ├── baselines/
+  │   │   ├── fixed_policy.py         FixedPolicy (constant server count)
+  │   │   ├── queue_greedy_policy.py  QueueGreedyPolicy (ignore price)
+  │   │   └── price_aware_greedy_policy.py  PriceAwareGreedyPolicy (defer P3)
+  │   │
+  │   └── evaluation/
+  │       ├── metrics.py              episode_stats_to_row(), aggregate_to_summary()
+  │       └── plot.py                 Matplotlib helpers (bar charts, training curves)
+  │
+  └── tests/
+      ├── _fixtures.py               tiny_cfg() + tiny_load_matrices() for test isolation
+      ├── test_env.py                 Env invariants: state shape, bounds, episode lifecycle
+      ├── test_dtaci.py               DtACI contract: interval validity, coverage, weights
+      └── test_shield.py              DtACIActionShield invariants: bounds, raising, identity
+
+================================================================================
+3. DATA PIPELINE (how data flows from CSV to env.reset())
+================================================================================
+
+  Stage A — Preprocessing (data_preprocess.py)
+  --------------------------------------------
+  load_raw_csv("区域负荷2020-2023数据.csv")
+    → detects Chinese column names (时间, 有功功率)
+    → returns DataFrame[timestamp, regional_load_kw]
+
+  clean_and_resample()
+    → drop duplicates, reindex to 15-min grid, linear interpolate (limit=4)
+
+  keep_complete_days()
+    → keep only days with all 96 slots non-null
+    → output: processed_load.csv, complete_days_summary.csv
+
+  chronological_split()
+    → train: 60% (earliest), calibration: 20%, test: 20% (latest)
+    → output: train_cal_test_split.csv
+
+  Stage B — Building env ( _common.py → build_env_and_splits() )
+  ---------------------------------------------------------------
+  load_processed() → load_df, split_df
+  day_matrix()     → raw_load:  (D, 96)  kW per slot
+  normalised_day_matrix() → norm_load: (D, 96) in [0, 1]
+
+  IF workload.source == "synthetic" (default):
+      DataCenterEnv(..., external_workloads=None)
+      → env.reset(day) calls generate_day(norm_load[day], cfg, seed)
+
+  IF workload.source == "trace":
+      load_trace_workloads(trace_dir) → Dict[int, DayWorkload]
+      DataCenterEnv(..., external_workloads=workloads)
+      → env.reset(day) looks up external_workloads[day]
+
+  Stage C — Workload Generation ( workload_generator.py )
+  --------------------------------------------------------
+  compute_lambda(x, cfg) → (3, 96) arrival-rate matrix λ_k(t)
+      λ_P1(t) = a1 + b1·x(t) + c1·evening_indicator(t)
+      λ_P2(t) = a2 + b2·x(t) + c2·business_indicator(t)
+      λ_P3(t) = a3 + b3·night_indicator(t) + c3·(1-x(t))
+
+  generate_day(x, cfg, seed) → DayWorkload
+      For each slot t and priority k:
+        n_arrive ~ Poisson(λ_k(t))
+        For each arrived task:
+          work ~ Normal(μ_k, σ_k), clamped to [0.05, ∞)
+          deadline = t + deadline_slots[k], clamped to [0, 95]
+      Returns DayWorkload(lam, n_arrivals, arrival_work, tasks_per_slot)
+
+================================================================================
+4. ENVIRONMENT — DataCenterEnv (src/datacenter_env.py)
+================================================================================
+
+  Constructor
+  -----------
+  DataCenterEnv(cfg, day_load_matrix, day_norm_matrix, base_seed,
+                external_workloads=None)
+    - day_load_matrix: (D, 96) raw kW loads (for reference, not used in dynamics)
+    - day_norm_matrix: (D, 96) scaled to [0,1], used as x(t) for λ generation
+    - external_workloads: optional Dict[int, DayWorkload] for real-trace injection
+
+  Action Space
+  ------------
+  Discrete: 0 .. action_bins-1  (default 21 bins)
+    n_active = action_to_n(action, cfg)
+             = Nmin + (Nmax-Nmin) * a / (bins-1)
+             = 8 + 112 * a / 20
+    So action 0→8 servers, action 10→64, action 20→120.
+
+  State Space (17 dims after normalization)
+  -----------------------------------------
+    dim  0-2:  Q_k / 500                (queue length per priority)
+    dim  3-5:  B_k / 500                (backlog work per priority)
+    dim  6-8:  near_deadline_k / D_k    (tasks within 25% of deadline)
+    dim 9-11:  min_slack_k / D_k        (minimum remaining slack per priority)
+    dim   12:  price                    (electricity price, 0.32/0.55/0.95)
+    dim   13:  x(t)                     (normalised load in [0,1])
+    dim   14:  n_prev / Nmax            (previous active server count)
+    dim   15:  sin(2π·t/T)              (time-of-day encoding)
+    dim   16:  cos(2π·t/T)              (time-of-day encoding)
+
+  Dynamics (env.step(action_index))
+  ---------------------------------
+  1. a = clip(action_index, 0, bins-1)
+  2. n_active = Nmin + (Nmax-Nmin)*a/(bins-1)
+  3. Apply ramp limit: clip(n_active, n_prev-25, n_prev+25)
+  4. Arrive new tasks (from DayWorkload.tasks_per_slot[k][t])
+  5. Dispatch (strict priority + EDF within priority):
+       For k in 0..2 (P1 first):
+         Sort queue[k] by deadline ascending
+         Serve tasks until capacity exhausted
+         Record completed, violations (delay > deadline), delay_sum
+  6. Compute costs:
+       util = min(1, total_served / (n_active * cap_per_server))
+       srv_power = P_idle + (P_peak-P_idle) * util^γ
+       it_power = n_active * srv_power + P_fixed
+       facility_power = PUE * it_power
+       elec_cost = facility_power * dt * price[t]
+       qos_cost = Σ_k β_k * violations_k + ρ_k * overdue_pending_k
+       switch_cost = φ * |n_active - n_prev|
+       total_cost = elec_cost + qos_cost + switch_cost
+  7. Reward = -Σ(w_i * cost_i / scale_i)
+       weights: w_elec=1.0, w_qos=5.0, w_switch=0.2
+       scales:  s_elec=10.0, s_qos=10.0, s_switch=5.0
+
+  NOTE on action flow (CRITICAL):
+    - heuristic policies call n_to_action(server_count) → returns action index
+    - RL path converts agent action index → server count (action_to_n)
+      then passes to shield (which works in server counts)
+      then converts back to action index (n_to_action) before env.step()
+    - env.step() ALWAYS receives an action INDEX, never a server count
+
+================================================================================
+5. RL COMPONENTS
+================================================================================
+
+  DQNAgent (src/rl/dqn_agent.py)
+  ------------------------------
+  QNetwork: MLP [in_dim, 128, 128, out_dim] with ReLU
+  ReplayBuffer: deque with uniform random sampling (maxlen=50,000)
+  Training: smooth L1 loss, Adam optimizer, target network every 200 steps
+  Epsilon: 1.0 → 0.05, decay=0.995 per episode
+  reward_scale applied in agent.push(): stored_reward = env_reward * reward_scale
+    (env already applies its own weight/scale, so reward_scale=1.0 in config)
+
+  StateAugmenter Protocol (src/rl/train_dqn.py & augmenters.py)
+  -------------------------------------------------------------
+  Each augmenter provides:
+    reset(env, day_index)        — per-episode init
+    augment(state, env) → array  — extend state with extra features
+    shield(n_servers, state, env) → int  — modify action (server count → server count)
+    on_step(env, info, a_pre, a_post) — per-step callback (update conformal learners)
+    metrics() → dict             — diagnostic info
+
+  IdentityAugmenter (plain DQN):
+    augment → returns state unchanged (17 dims)
+    shield  → returns n_servers unchanged
+
+  ConformalAugmenter (ACI-DQN / DtACI-DQN):
+    Contains PerPriorityConformalForecaster with K ACI/DtACI learners.
+    augment → state (17) + [mean(hi)/λ_scale, mean(lo)/λ_scale] (2K dims = 6)
+            → total state dim = 17 + 6 = 23
+    shield  → if DtACI shield active, ensures n_servers ≥ minimum from bounds
+    on_step → calls conformal.update() with actual arrivals
+
+  Training Loop (train_agent in train_dqn.py)
+  -------------------------------------------
+  For each episode:
+    1. Randomly sample a training day
+    2. rollout_episode(env, agent, augmenter, day, train=True):
+         reset env → augment state → while not done:
+           a_raw = agent.select_action(s_aug)          # ε-greedy, action index
+           a_n   = action_to_n(a_raw)                  # → server count
+           a_safe = augmenter.shield(a_n)              # → possibly modified
+           a_safe_idx = n_to_action(a_safe)            # → back to action index
+           next_state, reward, done, info = env.step(a_safe_idx)
+           s2_aug = augmenter.augment(next_state)
+           augmenter.on_step(env, info, a_raw, a_safe)
+           agent.push(s_aug, a_raw, reward, s2_aug, done)
+           agent.train_step()  # gradient update if buffer full enough
+    3. agent.decay_epsilon()
+
+  Evaluation (evaluate in train_dqn.py)
+  -------------------------------------
+  Same as rollout_episode but:
+    - greedy=True (no epsilon noise)
+    - seed=None → each test day deterministically seeded (base_seed + day_index)
+    - All methods see identical task traces on each day for fair comparison
+
+================================================================================
+6. CONFORMAL PREDICTION LAYER
+================================================================================
+
+  Architecture
+  ------------
+  For each priority k ∈ {1,2,3}:
+    forecaster[k] → ŷ_k(t) = rolling mean of past arrival counts
+    learner[k]    → online conformal: emits [ŷ - q_α, ŷ + q_α] and updates α
+
+  ACI (src/conformal/aci.py)
+  --------------------------
+  State: α_t (effective miscoverage rate), residuals buffer (rolling window 200)
+
+  interval(y_hat):
+    q_level = 1 - α_t
+    q = quantile(residuals, q_level, method="higher")
+    return [y_hat - q, y_hat + q]
+
+  update(y_hat, y_true, lo, hi):
+    covered = int(lo <= y_true <= hi)
+    err = 1 - covered
+    α_{t+1} = clip(α_t + η * (α_target - err), α_min, α_max)
+    residual = |y_true - y_hat|
+    append to rolling buffer (trim to buffer_size=200)
+
+  Key insight: When coverage is too high (conservative intervals), α increases
+  → narrower intervals. When coverage drops (distribution shift), α decreases
+  → wider intervals. The Q-network sees wider intervals and infers "uncertainty".
+
+  DtACI (src/conformal/dtaci.py)
+  ------------------------------
+  Ensemble of M=5 ACI experts with different η ∈ {0.005, 0.02, 0.05, 0.1, 0.25}.
+
+  Mixture weights w_m updated via exponential weighting on pinball loss:
+    L_t^{(m)} = α_target * max(0, err_m - α_target)
+              + (1-α_target) * max(0, α_target - err_m)
+    w_{t+1}^{(m)} ∝ w_t^{(m)} * exp(-σ * L_t^{(m)})
+  Plus mild smoothing: w ← (1 - meta_lr)*w + meta_lr/M
+
+  The mixture quantile q_mix = Σ_m w_m * q_m is used for the final interval.
+
+  PerPriorityConformalForecaster (src/rl/augmenters.py)
+  -----------------------------------------------------
+  Manages K independent forecasters + K conformal learners.
+
+  warm_up_from_calibration(y_hat_cal, y_cal):
+    Populates residual buffers with calibration residuals (no test leakage).
+
+  intervals_h_steps():
+    Returns (K, H) lower/upper bounds.
+    For each k: forecaster predicts ŷ_k, learner gives interval.
+    The horizon H=4 (1 hour) is used by the action shield.
+
+  update_after_step(info):
+    Uses actual arrivals from info to update each learner online.
+
+================================================================================
+7. SAFETY ACTION SHIELD (src/safe_layer/dtaci_action_shield.py)
+================================================================================
+
+  DtACIActionShield
+  -----------------
+  Purpose: Post-process RL action to guarantee ≥ minimum servers for P1+P2.
+
+  filter(n_rl, queue_len, lambda_upper):
+    W_U = Σ_{k∈K'} [ Q_k(t) * c̄_k + Σ_{h=1}^H λ_k^U(t+h) * c̄_k ]
+    n_required = ceil(W_U / (cap_per_server * H))
+    n_safe = max(n_rl, n_required), clamped to [Nmin, Nmax]
+
+  Where:
+    K' = {1,2} (P1+P2, configurable via protect_priorities)
+    c̄_k = average compute per task for priority k
+    H = 4 (conformal forecast horizon)
+    λ_k^U comes from DtACI upper bounds, clipped at λ_scale=20 to prevent
+    extreme over-provisioning.
+
+  ShieldLog tracks:
+    - n_steps, n_mods (how often shield overrides RL)
+    - mod_sizes (by how many servers)
+
+================================================================================
+8. HEURISTIC BASELINES
+================================================================================
+
+  FixedPolicy
+  -----------
+  Always returns n_to_action((Nmin+Nmax)//2) = n_to_action(64) ≈ action 10.
+
+  QueueGreedyPolicy
+  -----------------
+  effective_work = 1.20*b1 + 0.80*b2 + 0.60*b3 + 0.80*near_deadline_work
+  desired_cap = effective_work / target_util(=0.75)
+  n = ceil(desired_cap / cap_per_server), with ramp limit + bounds
+  Ignores electricity price.
+
+  PriceAwareGreedyPolicy
+  ----------------------
+  Same as QueueGreedy but P3 contribution is scaled by 'deferrable':
+    If price > mean(price) + 0.25*std(price) → deferrable = 0.25
+    Unless P3 has min_slack ≤ 4 (emergency override)
+  This mirrors the classical greedy_policy.m from the Octave reference.
+
+================================================================================
+9. EVALUATION & METRICS (src/evaluation/)
+================================================================================
+
+  Per-episode stats (EpisodeStats dataclass in train_dqn.py):
+    total_reward, total_cost, elec_cost, qos_cost, switch_cost
+    sla_violations[3], completed[3], delay_sum[3]
+    avg_n_active, peak_power, avg_power, energy, avg_util
+    overdue_pending[3]
+
+  episode_stats_to_row() converts to dict with derived metrics:
+    Pk_sla_violation_rate = violations[k] / max(completed[k], 1)
+    Pk_avg_delay = delay_sum[k] / max(completed[k], 1)
+
+  aggregate_to_summary() groups by method, averages across test days.
+  Sorted by total_objective_cost ascending.
+
+================================================================================
+10. REAL-TRACE INTERFACE (src/trace_loader.py) [NEW]
+================================================================================
+
+  Function: load_trace_workloads(trace_dir, cfg, day_dates)
+
+  Input format (Alibaba PAI trace):
+    pai_task_table.csv    — task metadata (start_time, end_time, plan_cpu, plan_gpu, gpu_type)
+    pai_group_tag_table.csv — workload classification labels
+
+  Priority assignment heuristic (classify_priority, overrideable):
+    GPU tasks (plan_gpu > 0 or gpu_type not empty) → P1
+    Else → check workload label: delay_sensitive/online → P1, interactive → P2, batch → P2
+
+  Work requirement: plan_cpu * 0.01 (scaled to compute units)
+
+  Deadline: derived from task duration (end_time - start_time) / 900s,
+            clamped to [1, 95] slots.
+
+  Output: Dict[day_index → DayWorkload] ready for DataCenterEnv injection.
+
+  To switch from synthetic to real traces:
+    1. Set workload.source = "trace" in config.yaml
+    2. Place PAI trace CSVs in trace_dir
+    3. Run as normal — _common.py auto-detects and loads
+
+  CUSTOMIZATION: Override classify_priority() in trace_loader.py for different
+  trace formats (Google Borg, Azure, etc.).
+
+================================================================================
+11. CONFIGURATION REFERENCE (config.yaml)
+================================================================================
+
+  paths:          raw_csv, processed_dir, figures_dir, logs_dir, outputs_dir, models_dir
+  time:           slots_per_day=96, dt_hour=0.25
+  server:         Nmin=8, Nmax=120, cap_per_server=1.0, target_util=0.75, ramp_limit=25
+  power:          P_idle=0.18, P_peak=0.42, P_fixed=8.0, PUE=1.35, power_gamma=1.15
+  qos:
+    K=3
+    deadline_slots: [2, 8, 32]        (P1: 30min, P2: 2h, P3: 8h)
+    service_mean:   [0.60, 1.20, 4.00]
+    sla_penalty:    [50.0, 20.0, 5.0] (β_k, per completed violation)
+    overdue_penalty:[2.0, 0.8, 0.2]   (ρ_k, per pending overdue task)
+  price:          low=0.32, middle=0.55, high=0.95 (CNY/kWh)
+  workload:
+    source: "synthetic" | "trace"
+    trace_dir: path to CSVs (only when source=trace)
+    p1/p2/p3: {a, b, c} formula coefficients
+  split:          train=60%, cal=20%, test=20% (chronological)
+  conformal:
+    alpha=0.10, horizon=4, alpha_min=0.005, alpha_max=0.30
+    aci_eta=0.05, dtaci_etas=[0.005,0.02,0.05,0.1,0.25]
+    dtaci_sigma=0.10, dtaci_meta_lr=0.10
+    protect_priorities=[1,2], forecaster=rolling_mean, rolling_window=8
+    upper_bound_clip_method=p95, lambda_scale=20.0
+  rl:
+    action_bins=21, gamma=0.99, lr=0.0005, batch_size=64
+    replay_size=50000, train_episodes=500
+    epsilon_start=1.0, epsilon_end=0.05, epsilon_decay=0.995
+    target_update_interval=200, learning_starts=200
+    hidden_sizes=[128,128], reward_scale=1.0, max_grad_norm=5.0
+    reward_weights: {elec:1.0, qos:5.0, switch:0.2}
+    reward_scales:  {elec:10.0, qos:10.0, switch:5.0}
+
+================================================================================
+12. KNOWN ISSUES & DESIGN NOTES
+================================================================================
+
+  [FIXED] Critical Bug — action double-conversion
+    Files: src/rl/train_dqn.py, stress_test_scenarios.py, analysis_plots.py
+    Problem: rollout_episode converted action index to server count (action_to_n),
+             passed server count through shield, then passed server count directly
+             to env.step() which expects action index. env.step() would then call
+             action_to_n() on the server count, clipping it to 0..20 and mapping
+             to extreme values.
+    Fix: Added n_to_action(a_safe) conversion back to action index before env.step().
+
+  [FIXED] Dead code: src/rl/episode_stats.py
+    Contained a second EpisodeStats class that was never imported.
+    The canonical EpisodeStats is the @dataclass in train_dqn.py.
+    Removed.
+
+  [NOTE] calibration_arrival_data() generates SYNTHETIC calibration data.
+    When using real traces (workload.source="trace"), the conformal learners
+    should be warmed up on actual trace arrival data, not synthetic Poisson.
+    Current approach works if you first train on synthetic and then switch
+    to traces for eval only. For full trace training, update
+    calibration_arrival_data() to extract arrivals from env workloads.
+
+  [NOTE] analysis_plots.py and generate_figures.py have overlapping functionality.
+    generate_figures.py is the newer, publication-quality version.
+    analysis_plots.py contains additional stress test code not in generate_figures.py.
+
+  [NOTE] object.__setattr__ hack in analysis_plots.py and stress_test_scenarios.py
+    Used to override env.price_curve for custom price scenarios. Works but is
+    fragile. Consider adding a set_price_curve() method to DataCenterEnv.
+
+================================================================================
+13. RUNNING THE PROJECT
+================================================================================
+
+  Local full experiment:
+    python main.py --all                    # all 6 methods, train + eval
+    python main.py --method aci_dqn         # single method
+    python main.py --all --skip-preprocess  # use cached processed data
+
+  Cloud training (Notebook):
+    Upload train_cloud.ipynb + project files to Colab/Kaggle/AutoDL
+    Run cells sequentially
+    Download models from outputs/models/
+
+  Stress testing:
+    python stress_test_scenarios.py         # S1/S2/S3 scenarios
+
+  Figures:
+    python generate_figures.py              # 5 publication-quality figures
+
+  Tests:
+    python -m pytest tests/ -v
+
+================================================================================
+14. EXTENSION POINTS (where to add new features)
+================================================================================
+
+  New RL algorithm:
+    - Add new method name to main.py ALL_METHODS
+    - Implement agent class (can reuse DQNAgent or write new)
+    - Add augmenter if needed (conformal or other)
+    - Add to _build_rl_agent() dispatch
+
+  New conformal method:
+    - Implement learner in src/conformal/ (follow ACI/DtACI interface)
+    - Add to PerPriorityConformalForecaster._build_learners()
+    - Add config parameters under conformal: section
+
+  New baseline heuristic:
+    - Implement policy class in src/baselines/
+    - Add to HEURISTIC_METHODS in main.py
+    - Add to _make_policy() dispatch
+
+  New task trace format:
+    - Override classify_priority() in src/trace_loader.py
+    - Update column names in load_trace_workloads()
+    - Or write a new loader and call it from _common.py
+
+  New reward function:
+    - Modify reward_weights and reward_scales in config.yaml
+    - Or modify DataCenterEnv.step() reward computation directly
+
+  Multi-datacenter extension:
+    - Wrap DataCenterEnv in a vectorized or multi-env wrapper
+    - Add inter-datacenter load migration actions
+    - Modify reward to include migration cost
+
+================================================================================
+END OF DOCUMENT
+================================================================================

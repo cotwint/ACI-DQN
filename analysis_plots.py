@@ -20,7 +20,7 @@ from typing import Dict, List
 
 from src.utils import load_config, set_global_seed, ensure_dir
 from src.data_preprocess import load_processed, day_matrix, normalised_day_matrix
-from src.datacenter_env import DataCenterEnv, action_to_n
+from src.datacenter_env import DataCenterEnv, action_to_n, n_to_action
 from _common import build_env_and_splits
 from src.rl.dqn_agent import DQNAgent
 from src.rl.train_dqn import rollout_episode, IdentityAugmenter, EpisodeStats
@@ -560,7 +560,8 @@ def generate_stress_test():
                 a_raw = agent.select_action(s_aug, greedy=True)
                 a_n = action_to_n(a_raw, cfg)
                 a_safe = aug.shield(a_n, s_aug, env_s)
-                next_state, r, d, info = env_s.step(a_safe)
+                a_safe_idx = n_to_action(a_safe, cfg)
+                next_state, r, d, info = env_s.step(a_safe_idx)
                 aug.on_step(env_s, info, a_raw, a_safe)
                 state = next_state
                 if d:

@@ -98,6 +98,9 @@ class DataCenterEnv:
     day_load_matrix : (D, T) regional load curve, kW. Used to derive x(t).
     day_norm_matrix : (D, T) per-day min-max normalised load in [0,1].
     base_seed : int for workload generation seeds (each day uses base+day_idx).
+    external_workloads : optional dict mapping day_index -> DayWorkload.
+        When provided, ``reset()`` uses the pre-built workload instead of
+        calling ``generate_day()``. This is the interface for real trace data.
     """
 
     metadata = {"render.modes": []}
@@ -106,11 +109,13 @@ class DataCenterEnv:
                  cfg: Dict,
                  day_load_matrix: np.ndarray,
                  day_norm_matrix: np.ndarray,
-                 base_seed: int = 0):
+                 base_seed: int = 0,
+                 external_workloads: Optional[Dict[int, DayWorkload]] = None):
         self.cfg = cfg
         self.day_load_matrix = day_load_matrix
         self.day_norm_matrix = day_norm_matrix
         self.base_seed = int(base_seed)
+        self._external_workloads = external_workloads
 
         self.T = int(cfg["time"]["slots_per_day"])
         self.dt = float(cfg["time"]["dt_hour"])
@@ -159,15 +164,29 @@ class DataCenterEnv:
     # -----------------------------------------------------------------
 
     def reset(self, day_index: int,
-              seed: Optional[int] = None) -> Tuple[np.ndarray, Dict]:
-        """Reset env to start of one day."""
+              seed: Optional[int] = None,
+              workload_override: Optional[DayWorkload] = None
+              ) -> Tuple[np.ndarray, Dict]:
+        """Reset env to start of one day.
+
+        Workload resolution order:
+        1. ``workload_override`` (one-shot, e.g. stress test injection)
+        2. ``self._external_workloads[day_index]`` (real-trace interface)
+        3. ``generate_day()`` (synthetic, default)
+        """
         if not (0 <= day_index < self.day_load_matrix.shape[0]):
             raise IndexError(f"day_index {day_index} out of range")
         self.day_index = day_index
         self.x_curve = self.day_norm_matrix[day_index].copy()
 
-        wseed = self.base_seed + day_index if seed is None else int(seed)
-        self.workload = generate_day(self.x_curve, self.cfg, wseed)
+        if workload_override is not None:
+            self.workload = workload_override
+        elif (self._external_workloads is not None
+              and day_index in self._external_workloads):
+            self.workload = self._external_workloads[day_index]
+        else:
+            wseed = self.base_seed + day_index if seed is None else int(seed)
+            self.workload = generate_day(self.x_curve, self.cfg, wseed)
 
         self.queues = [[] for _ in range(self.K)]
         self.t = 0

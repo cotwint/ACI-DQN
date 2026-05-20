@@ -11,3 +11,4 @@ wheels/
 
 # Dataset files
 trace_dataset/
+trace_dataset_backup/

@@ -19,14 +19,12 @@ A ``StateAugmenter`` is any object that exposes::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import torch
 
-from ..datacenter_env import DataCenterEnv, action_to_n
-from ..utils import get_logger, ensure_dir
+from ..datacenter_env import DataCenterEnv, action_to_n, n_to_action
+from ..utils import get_logger
 from .dqn_agent import DQNAgent
 
 
@@ -83,7 +81,8 @@ def rollout_episode(env: DataCenterEnv,
                     day_index: int,
                     train: bool,
                     seed: Optional[int] = None,
-                    record_actions: bool = False) -> EpisodeStats:
+                    record_actions: bool = False
+                    ) -> Tuple[EpisodeStats, float, int, list]:
     # When seed is None, env uses base_seed + day_index (deterministic).
     state, _ = env.reset(day_index, seed=seed)
     augmenter.reset(env, day_index)
@@ -95,10 +94,11 @@ def rollout_episode(env: DataCenterEnv,
     while not env.done:
         a_raw = (agent.select_action(s_aug, greedy=not train)
                  if agent is not None else 0)
-        # Convert discrete action index to server count BEFORE shield/env.
+        # Agent action index -> server count -> shield -> action index -> env
         a_n = action_to_n(a_raw, env.cfg)
         a_safe = augmenter.shield(a_n, s_aug, env)
-        next_state, reward, done, info = env.step(a_safe)
+        a_safe_idx = n_to_action(a_safe, env.cfg)
+        next_state, reward, done, info = env.step(a_safe_idx)
         s2_aug = augmenter.augment(next_state, env)
         augmenter.on_step(env, info, a_raw, a_safe)
         if train and agent is not None:
@@ -181,7 +181,9 @@ def evaluate(env: DataCenterEnv,
              augmenter,
              eval_days: List[int],
              rng: Optional[np.random.Generator] = None,
-             record_actions: bool = False) -> List[EpisodeStats]:
+             record_actions: bool = False
+             ) -> Union[List[EpisodeStats],
+                        Tuple[List[EpisodeStats], list]]:
     out: List[EpisodeStats] = []
     all_action_logs: list = []
     for d in eval_days:

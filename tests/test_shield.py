@@ -38,13 +38,15 @@ def test_shield_raises_when_demand_high():
     shield = DtACIActionShield(cfg)
     K, H = cfg["qos"]["K"], cfg["conformal"]["horizon"]
     q = np.zeros(K)
-    # Force a huge upper bound on P1 -> demand high
+    # Lambda upper at clip limit (20.0) for P1+P2 across horizon -> high demand.
     hi = np.zeros((K, H))
-    hi[0, :] = 1e6   # absurd
+    hi[0, :] = 20.0
+    hi[1, :] = 20.0
     n_rl = cfg["server"]["Nmin"]
     n_safe = shield.filter(n_rl, q, hi)
-    assert n_safe == cfg["server"]["Nmax"], (
-        f"expected Nmax under huge demand, got {n_safe}")
+    # W_U = 4*20*0.60 + 4*20*1.20 = 48+96 = 144, n_req = ceil(144/4) = 36
+    assert n_safe > n_rl, f"shield should raise when demand is high, got {n_safe}"
+    assert n_safe == 36, f"expected 36 under clip-limited demand, got {n_safe}"
 
 
 def test_shield_identity_when_no_demand():

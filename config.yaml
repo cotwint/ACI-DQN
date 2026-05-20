@@ -55,6 +55,8 @@ price:
 
 # ----- Workload generator ------------------------------------
 workload:
+  source: synthetic     # "synthetic" (formula-driven) or "trace" (real cluster data)
+  trace_dir: "trace_dataset/"   # only used when source = "trace"
   p1: {a: 1.0, b: 6.0, c: 2.0}
   p2: {a: 2.0, b: 4.0, c: 2.0}
   p3: {a: 0.5, b: 3.5, c: 2.0}

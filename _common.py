@@ -10,10 +10,12 @@ from __future__ import annotations
 from typing import Dict, List, Tuple
 
 import numpy as np
+import pandas as pd
 
 from src.data_preprocess import load_processed, day_matrix, normalised_day_matrix
 from src.datacenter_env import DataCenterEnv
 from src.workload_generator import compute_lambda
+from src.trace_loader import load_trace_workloads
 
 
 def build_env_and_splits(cfg: Dict
@@ -21,6 +23,10 @@ def build_env_and_splits(cfg: Dict
                                     Dict[str, List[int]],
                                     np.ndarray]:
     """Construct the environment + train/cal/test day-index lists.
+
+    When ``cfg['workload']['source'] == 'trace'``, real cluster trace
+    data is loaded via ``load_trace_workloads()`` and injected into the
+    environment via the ``external_workloads`` parameter.
 
     Returns
     -------
@@ -32,10 +38,26 @@ def build_env_and_splits(cfg: Dict
     load_df, split_df = load_processed(cfg)
     raw, dates = day_matrix(load_df, cfg["time"]["slots_per_day"])
     norm, _ = normalised_day_matrix(load_df, cfg["time"]["slots_per_day"])
+
+    # ---- Real-trace workload injection --------------------------------
+    external_workloads = None
+    wl_source = cfg.get("workload", {}).get("source", "synthetic")
+    if wl_source == "trace":
+        trace_dir = cfg.get("workload", {}).get("trace_dir", "trace_dataset/")
+        day_dates = [pd.Timestamp(d).date() for d in dates]
+        external_workloads = load_trace_workloads(
+            trace_dir=trace_dir,
+            cfg=cfg,
+            day_dates=day_dates,
+            time_slots=cfg["time"]["slots_per_day"],
+        )
+    # ------------------------------------------------------------------
+
     env = DataCenterEnv(cfg=cfg,
                         day_load_matrix=raw,
                         day_norm_matrix=norm,
-                        base_seed=int(cfg.get("seed", 0)))
+                        base_seed=int(cfg.get("seed", 0)),
+                        external_workloads=external_workloads)
 
     # Day-index lookup: which row in env.day_load_matrix corresponds to a date.
     date_to_idx = {d: i for i, d in enumerate(dates)}

@@ -49,6 +49,8 @@ def tiny_cfg() -> dict:
             "dtaci_sigma": 0.10, "dtaci_meta_lr": 0.10,
             "protect_priorities": [1, 2],
             "forecaster": "rolling_mean", "rolling_window": 8,
+            "upper_bound_clip_method": "p95",
+            "lambda_scale": 20.0,
         },
         "rl": {"algorithm": "DQN", "action_bins": 21, "gamma": 0.99,
                "lr": 5e-4, "batch_size": 32, "replay_size": 1024,

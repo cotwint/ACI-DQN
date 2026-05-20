@@ -21,7 +21,25 @@
       "Bash(.venv/Scripts/python.exe generate_figures.py)",
       "Bash(python generate_figures.py)",
       "Bash(python _explore_trace.py)",
-      "Bash(python trace_preprocess.py)"
+      "Bash(python trace_preprocess.py)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git rev-list *)",
+      "Bash(git cat-file *)",
+      "Bash(awk '/^blob/ {print $2, $3}')",
+      "Bash(mv \"d:/Users/ZhuanZ1/Downloads/files/trace_dataset\" \"d:/Users/ZhuanZ1/Downloads/trace_dataset_backup\")",
+      "Bash(git filter-branch *)",
+      "Bash(git stash *)",
+      "Bash(git update-ref *)",
+      "Bash(git reflog *)",
+      "Bash(git gc *)",
+      "Bash(git add *)",
+      "Bash(python -m pytest tests/ -x -q)",
+      "Bash(python -m pytest tests/test_shield.py -v)"
+    ],
+    "additionalDirectories": [
+      "d:\\Users\\ZhuanZ1\\Downloads"
     ]
   }
 }

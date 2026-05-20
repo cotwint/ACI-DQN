@@ -25,7 +25,7 @@ from typing import Dict, List, Tuple
 
 from src.utils import load_config, set_global_seed, ensure_dir
 from src.data_preprocess import day_matrix, normalised_day_matrix
-from src.datacenter_env import DataCenterEnv, action_to_n
+from src.datacenter_env import DataCenterEnv, action_to_n, n_to_action
 from src.workload_generator import Task, DayWorkload
 from src.rl.dqn_agent import DQNAgent
 from src.rl.train_dqn import IdentityAugmenter, EpisodeStats
@@ -185,7 +185,8 @@ def run_rl(env, agent, aug, workload, price_curve):
         a_raw = agent.select_action(s_aug, greedy=True)
         a_n = action_to_n(a_raw, cfg)
         a_safe = aug.shield(a_n, s_aug, env)
-        next_state, _, _, info = env.step(a_safe)
+        a_safe_idx = n_to_action(a_safe, cfg)
+        next_state, _, _, info = env.step(a_safe_idx)
         aug.on_step(env, info, a_raw, a_safe)
         state = next_state
     return _collect_stats(env)
